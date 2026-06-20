@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
+import { emailValid } from '../utils/validare'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -14,6 +15,10 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setEroare('')
+    if (!emailValid(email)) {
+      setEroare('Adresa de email nu este valida (ex: adresa@email.com).')
+      return
+    }
     setLoading(true)
     try {
       const formData = new FormData()

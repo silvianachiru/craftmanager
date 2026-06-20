@@ -71,6 +71,7 @@ class AtelierResponse(BaseModel):
     idlocatie: int
     idinstructor: int
     materiale_salvate: bool = False
+    nr_inscrisi: int = 0
     locatie: Optional[LocatieResponse] = None
     instructor: Optional[InstructorResponse] = None
     tema: Optional[TemaResponse] = None

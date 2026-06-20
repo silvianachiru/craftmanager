@@ -7,6 +7,7 @@ import clockIcon from '../assets/clock.png'
 import locationIcon from '../assets/location.png'
 import tagIcon from '../assets/tag.png'
 import starIcon from '../assets/star.png'
+import warningIcon from '../assets/warning.png'
 
 const getAtelierDateTime = (atelier) => {
   if (!atelier?.data) return null
@@ -118,8 +119,12 @@ export default function InscrierileMele() {
           <div className="card p-4" style={{ maxWidth: '420px', width: '90%', borderRadius: '20px' }}>
             <div className="text-center mb-3" style={{ fontSize: '2.5rem' }}>📋</div>
             <h5 style={{ textAlign: 'center', marginBottom: '12px' }}>Anulezi inscrierea?</h5>
-            <p style={{ color: 'var(--text-secundar)', textAlign: 'center', fontSize: '0.9rem', marginBottom: '24px' }}>
+            <p style={{ color: 'var(--text-secundar)', textAlign: 'center', fontSize: '0.9rem', marginBottom: '16px' }}>
               Esti sigur ca vrei sa anulezi inscrierea la acest atelier?
+            </p>
+            <p style={{ color: 'var(--text-secundar)', textAlign: 'center', fontSize: '0.82rem', marginBottom: '24px', background: '#fef9ec', borderRadius: '10px', padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+              <img src={warningIcon} alt="atentie" style={{ width: '14px', height: '14px', flexShrink: 0 }} />
+              Anularea este posibila doar cu cel putin 10 zile inainte de data atelierului.
             </p>
             <div className="d-flex gap-3 justify-content-center">
               <button type="button" className="btn btn-outline-primary px-4" onClick={() => setAnulareId(null)}>Nu, pastreaza</button>
@@ -234,6 +239,10 @@ export default function InscrierileMele() {
               </div>
             ) : (
               <div className="d-flex flex-column gap-3">
+                <div style={{ background: '#fef9ec', border: '1px solid #f5e4a0', borderRadius: '12px', padding: '10px 16px', fontSize: '0.85rem', color: '#7a6430', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <img src={warningIcon} alt="atentie" style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                  Inscrierea poate fi anulata cu cel putin <strong>10 zile</strong> inainte de data atelierului.
+                </div>
                 {inscrieriActive.map(inr => {
                     const colors = statusColor(inr.status)
                     const areRecenzie = recenziiAdaugate.has(inr.idinregistrare)

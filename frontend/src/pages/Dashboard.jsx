@@ -423,7 +423,7 @@ export default function Dashboard() {
                 <textarea name="descriere" className="form-control" rows={3} value={form.descriere} onChange={handleChange} maxLength={1000} />
                 <div className="d-flex justify-content-between align-items-center mt-1">
                   <button type="button" className="btn btn-sm btn-outline-primary" onClick={handleGenereaza} disabled={generare.loading}>
-                    {generare.loading ? 'Se genereaza...' : '✨ Genereaza descriere'}
+                    {generare.loading ? 'Se genereaza...' : <><img src={starsIcon} alt="" style={{ width: '14px', height: '14px', marginRight: '5px' }} />Genereaza descriere</>}
                   </button>
                   <span className="form-text mb-0">{form.descriere.length}/1000</span>
                 </div>
@@ -606,7 +606,7 @@ export default function Dashboard() {
                       </button>
                       <button type="button" className="btn btn-sm" style={{ border: '1px solid var(--roz)', color: 'var(--roz)', borderRadius: '50px' }}
                         onClick={() => handleVeziRecenzii(atelier.idatelier)}>
-                        <img src={starIcon} alt="" className="icon-sm" />
+                        <img src={starIcon} alt="" className="icon-sm" style={{ filter: 'none' }} />
                         {showRecenzii === atelier.idatelier ? 'Ascunde' : 'Evaluari'}
                       </button>
                       <button type="button" className="btn btn-sm" style={{ border: '1px solid #66bb6a', color: '#388e3c', borderRadius: '50px' }}

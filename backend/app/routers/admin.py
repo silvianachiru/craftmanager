@@ -2,15 +2,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from ..database import get_db
-from ..models import Utilizator, Participant, Instructor, Atelier, MesajContact, Tema, Categorie, Locatie
-from .auth import get_admin_curent
+from sqlalchemy import func
+from ..models import Utilizator, Participant, Instructor, Atelier, MesajContact, Tema, Categorie, Locatie, Inregistrare, Recenzie
+from .auth import get_admin_curent, anonimizeaza_cont
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
 
 @router.get("/utilizatori")
 def get_utilizatori(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
-    utilizatori = db.query(Utilizator).all()
+    utilizatori = db.query(Utilizator).filter(Utilizator.sters == False).all()
     rezultat = []
     for u in utilizatori:
         if u.administrator:
@@ -36,11 +37,13 @@ def sterge_utilizator(id: int, db: Session = Depends(get_db), admin=Depends(get_
     if id == admin.idutilizator:
         raise HTTPException(status_code=400, detail="Nu iti poti sterge propriul cont.")
     utilizator = db.query(Utilizator).filter(Utilizator.idutilizator == id).first()
-    if not utilizator:
+    if not utilizator or utilizator.sters:
         raise HTTPException(status_code=404, detail="Utilizatorul nu a fost gasit.")
-    db.delete(utilizator)
-    db.commit()
-    return {"message": "Utilizator sters."}
+
+    # Anonimizare: datele personale sunt eliminate, dar contul, recenziile si atelierele raman.
+    # Ridica 400 daca instructorul are ateliere active sau participantul are inscrieri active.
+    anonimizeaza_cont(utilizator, db)
+    return {"message": "Cont sters. Recenziile au fost pastrate."}
 
 
 @router.get("/ateliere")
@@ -158,3 +161,112 @@ def sterge_tema(id: int, db: Session = Depends(get_db), _=Depends(get_admin_cure
     db.delete(tema)
     db.commit()
     return {"message": "Tema stearsa."}
+
+
+@router.get("/statistici")
+def get_statistici(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
+    total_utilizatori = db.query(Utilizator).filter(Utilizator.sters == False).count()
+    total_ateliere = db.query(Atelier).count()
+    total_inscrieri = db.query(Inregistrare).filter(Inregistrare.status == 'Inscriere').count()
+    total_participari = db.query(Inregistrare).filter(Inregistrare.status == 'Participare').count()
+    total_recenzii = db.query(Recenzie).count()
+
+    instructori = (
+        db.query(
+            Utilizator.prenume,
+            Utilizator.nume,
+            func.count(func.distinct(Atelier.idatelier)).label("nr_ateliere"),
+            func.coalesce(func.round(func.avg(Recenzie.rating), 2), 0).label("rating_mediu"),
+            func.count(func.distinct(Recenzie.idrecenzie)).label("nr_recenzii"),
+            func.count(Inregistrare.idinregistrare).filter(Inregistrare.status == 'Participare').label("total_participanti"),
+        )
+        .join(Instructor, Instructor.idutilizator == Utilizator.idutilizator)
+        .outerjoin(Atelier, Atelier.idinstructor == Instructor.idinstructor)
+        .outerjoin(Inregistrare, Inregistrare.idatelier == Atelier.idatelier)
+        .outerjoin(Recenzie, Recenzie.idinregistrare == Inregistrare.idinregistrare)
+        .group_by(Utilizator.prenume, Utilizator.nume)
+        .order_by(func.count(func.distinct(Atelier.idatelier)).desc())
+        .all()
+    )
+
+    top_ateliere = (
+        db.query(
+            Atelier.idatelier,
+            Atelier.denumire,
+            Atelier.data,
+            Utilizator.prenume,
+            Utilizator.nume,
+            func.count(Inregistrare.idinregistrare).filter(Inregistrare.status != 'Anulare').label("nr_inscrisi"),
+            func.coalesce(func.round(func.avg(Recenzie.rating), 1), 0).label("rating_mediu"),
+        )
+        .join(Instructor, Atelier.idinstructor == Instructor.idinstructor)
+        .join(Utilizator, Instructor.idutilizator == Utilizator.idutilizator)
+        .outerjoin(Inregistrare, Inregistrare.idatelier == Atelier.idatelier)
+        .outerjoin(Recenzie, Recenzie.idinregistrare == Inregistrare.idinregistrare)
+        .group_by(Atelier.idatelier, Atelier.denumire, Atelier.data, Utilizator.prenume, Utilizator.nume)
+        .order_by(func.count(Inregistrare.idinregistrare).filter(Inregistrare.status != 'Anulare').desc())
+        .limit(5)
+        .all()
+    )
+
+    top_ateliere_rating = (
+        db.query(
+            Atelier.idatelier,
+            Atelier.denumire,
+            Atelier.data,
+            Utilizator.prenume,
+            Utilizator.nume,
+            func.count(Recenzie.idrecenzie).label("nr_recenzii"),
+            func.round(func.avg(Recenzie.rating), 1).label("rating_mediu"),
+        )
+        .join(Instructor, Atelier.idinstructor == Instructor.idinstructor)
+        .join(Utilizator, Instructor.idutilizator == Utilizator.idutilizator)
+        .join(Inregistrare, Inregistrare.idatelier == Atelier.idatelier)
+        .join(Recenzie, Recenzie.idinregistrare == Inregistrare.idinregistrare)
+        .group_by(Atelier.idatelier, Atelier.denumire, Atelier.data, Utilizator.prenume, Utilizator.nume)
+        .having(func.count(Recenzie.idrecenzie) > 0)
+        .order_by(func.avg(Recenzie.rating).desc(), func.count(Recenzie.idrecenzie).desc())
+        .limit(5)
+        .all()
+    )
+
+    return {
+        "general": {
+            "total_utilizatori": total_utilizatori,
+            "total_ateliere": total_ateliere,
+            "total_inscrieri": total_inscrieri,
+            "total_participari": total_participari,
+            "total_recenzii": total_recenzii,
+        },
+        "instructori": [
+            {
+                "nume": f"{r.prenume} {r.nume}",
+                "nr_ateliere": r.nr_ateliere,
+                "rating_mediu": float(r.rating_mediu),
+                "nr_recenzii": r.nr_recenzii,
+                "total_participanti": r.total_participanti,
+            }
+            for r in instructori
+        ],
+        "top_ateliere": [
+            {
+                "idatelier": r.idatelier,
+                "denumire": r.denumire,
+                "data": r.data,
+                "instructor": f"{r.prenume} {r.nume}",
+                "nr_inscrisi": r.nr_inscrisi,
+                "rating_mediu": float(r.rating_mediu),
+            }
+            for r in top_ateliere
+        ],
+        "top_ateliere_rating": [
+            {
+                "idatelier": r.idatelier,
+                "denumire": r.denumire,
+                "instructor": f"{r.prenume} {r.nume}",
+                "nr_recenzii": r.nr_recenzii,
+                "rating_mediu": float(r.rating_mediu),
+            }
+            for r in top_ateliere_rating
+        ],
+    }

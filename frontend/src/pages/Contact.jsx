@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import axios from 'axios'
+import { emailValid } from '../utils/validare'
 import atelier4 from '../assets/atelier4.jpg'
 import letterIcon from '../assets/letter.png'
 import phoneIcon from '../assets/phone-call.png'
@@ -17,6 +18,10 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setEroare('')
+    if (!emailValid(form.email)) {
+      setEroare('Adresa de email nu este valida (ex: adresa@email.com).')
+      return
+    }
     try {
       await axios.post('http://localhost:8000/contact', form)
       setTrimis(true)

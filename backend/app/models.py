@@ -17,6 +17,7 @@ class Utilizator(Base):
     parola = Column(String(200), nullable=False)
     nrtelefon = Column(String(15), nullable=True)
     datacrearii = Column(TIMESTAMP, nullable=False, server_default=func.now())
+    sters = Column(Boolean, nullable=False, server_default="false")
     participant = relationship("Participant", back_populates="utilizator", uselist=False)
     instructor = relationship("Instructor", back_populates="utilizator", uselist=False)
     administrator = relationship("Administrator", back_populates="utilizator", uselist=False)
@@ -110,6 +111,10 @@ class Atelier(Base):
     nivel = Column(String(20), nullable=False, default="Incepator")
     materiale_salvate = Column(Boolean, nullable=False, default=False)
     inregistrari = relationship("Inregistrare", back_populates="atelier")
+
+    @property
+    def nr_inscrisi(self):
+        return sum(1 for i in self.inregistrari if i.status == 'Inscriere')
     utilizari = relationship("Utilizare", back_populates="atelier")
     __table_args__ = (
         CheckConstraint("pret >= 0", name="ck_atelier_pret"),

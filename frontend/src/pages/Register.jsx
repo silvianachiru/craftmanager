@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../services/api'
+import { emailValid, telefonValid, numeValid } from '../utils/validare'
 import participantIcon from '../assets/participant.png'
 import letterIcon from '../assets/letter.png'
 import phoneIcon from '../assets/phone-call.png'
@@ -13,14 +14,16 @@ import artIcon from '../assets/art.png'
 const iconStyle = { width: '16px', height: '16px', marginRight: '6px', filter: 'invert(50%) sepia(30%) saturate(400%) hue-rotate(300deg)' }
 
 function validare(form) {
-  if (!/^[a-zA-Z\u0103\u00e2\u00ee\u015f\u0163\u0102\u00c2\u00ce\u015e\u0162\s-]+$/.test(form.nume.trim()))
+  if (!numeValid(form.nume))
     return 'Numele poate contine doar litere.'
-  if (!/^[a-zA-Z\u0103\u00e2\u00ee\u015f\u0163\u0102\u00c2\u00ce\u015e\u0162\s-]+$/.test(form.prenume.trim()))
+  if (!numeValid(form.prenume))
     return 'Prenumele poate contine doar litere.'
+  if (!emailValid(form.email))
+    return 'Adresa de email nu este valida (ex: adresa@email.com).'
   if (form.parola.length < 6)
     return 'Parola trebuie sa aiba cel putin 6 caractere.'
-  if (form.nrtelefon && !/^[+]?[0-9]{7,15}$/.test(form.nrtelefon.replace(/\s/g, '')))
-    return 'Numarul de telefon este invalid (7-15 cifre, optional +).'
+  if (form.nrtelefon && !telefonValid(form.nrtelefon))
+    return 'Numarul de telefon trebuie sa fie un numar de mobil valid: 07 sau +407 urmat de 8 cifre (ex: 0712345678).'
   if (form.tip === 'participant') {
     const v = parseInt(form.varsta)
     if (!form.varsta || isNaN(v) || v < 1 || v > 120)
@@ -48,7 +51,7 @@ export default function Register() {
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'nrtelefon') {
-      setForm({ ...form, nrtelefon: value.replace(/[^0-9+\s]/g, '').slice(0, 15) })
+      setForm({ ...form, nrtelefon: value.replace(/[^0-9+]/g, '').slice(0, 12) })
       return
     }
     setForm({ ...form, [name]: value })
@@ -123,8 +126,9 @@ export default function Register() {
                     <img src={phoneIcon} alt="" style={iconStyle} />Nr. Telefon
                     <span style={{ color: 'var(--text-secundar)', fontSize: '0.85rem', marginLeft: '6px' }}>(optional)</span>
                   </label>
-                  <input name="nrtelefon" type="tel" className="form-control" placeholder="07xxxxxxxx"
+                  <input name="nrtelefon" type="tel" className="form-control" placeholder="0712345678"
                     value={form.nrtelefon} onChange={handleChange} />
+                  <div className="form-text">Numar de mobil: 07… sau +407… (10 cifre).</div>
                 </div>
                 <div className="mb-3">
                   <label className="form-label" style={{ color: 'var(--text-principal)' }}>Tip cont</label>

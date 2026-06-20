@@ -27,6 +27,12 @@ def inscriere(
         raise HTTPException(status_code=404, detail="Atelier negasit")
     if datetime.combine(atelier.data, atelier.ora) <= datetime.now():
         raise HTTPException(status_code=400, detail="Nu te poti inscrie la un atelier care a avut deja loc")
+    nr_inscrisi = db.query(Inregistrare).filter(
+        Inregistrare.idatelier == atelier.idatelier,
+        Inregistrare.status == 'Inscriere'
+    ).count()
+    if atelier.locatie and nr_inscrisi >= atelier.locatie.capacitate:
+        raise HTTPException(status_code=400, detail="Atelierul este complet. Nu mai sunt locuri disponibile.")
 
     exista = db.query(Inregistrare).filter(
         Inregistrare.idparticipant == utilizator_curent.participant.idparticipant,
@@ -61,6 +67,14 @@ def anulare(
         raise HTTPException(status_code=404, detail="Inregistrare negasita")
     if inregistrare.idparticipant != utilizator_curent.participant.idparticipant:
         raise HTTPException(status_code=403, detail="Nu ai permisiunea sa anulezi aceasta inscriere")
+
+    atelier = db.query(Atelier).filter(Atelier.idatelier == inregistrare.idatelier).first()
+    zile_ramase = (atelier.data - datetime.now().date()).days
+    if zile_ramase < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="Anularea nu mai este posibila. Inscrierea poate fi anulata cu cel putin 10 zile inainte de atelier."
+        )
 
     inregistrare.status = "Anulare"
     db.commit()
@@ -100,7 +114,7 @@ def participanti_atelier(
         joinedload(Inregistrare.participant).joinedload(Participant.utilizator)
     ).filter(
         Inregistrare.idatelier == idatelier,
-        Inregistrare.status != 'Anulare'
+        Inregistrare.status == 'Inscriere'
     ).all()
 
     return [

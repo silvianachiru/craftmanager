@@ -139,9 +139,9 @@ export default function DetaliiAtelier() {
                 {mesaj && <div className="alert alert-success py-2 mb-3 atelier-inline-alert">{mesaj}</div>}
                 {eroare && <div className="alert alert-danger py-2 mb-3 atelier-inline-alert">{eroare}</div>}
                 {tip === 'participant' && !inscris && !atelierEsteTrecut && (
-                  <button className="btn btn-primary w-100" onClick={handleInscriere}>
-                    Inscrie-te acum
-                  </button>
+                  atelier.locatie && atelier.nrparticipanti >= atelier.locatie.capacitate
+                    ? <div className="alert alert-warning py-2 text-center mb-0" style={{fontSize:'0.85rem'}}>Atelierul este complet.</div>
+                    : <button className="btn btn-primary w-100" onClick={handleInscriere}>Inscrie-te acum</button>
                 )}
                 {tip === 'participant' && !inscris && atelierEsteTrecut && (
                   <div className="atelier-side-text text-center">
@@ -182,7 +182,7 @@ export default function DetaliiAtelier() {
                 { icon: ageIcon, label: 'Varsta recomandata', value: `${atelier.varstamin} - ${atelier.varstamax} ani` },
                 { icon: calendarIcon, label: 'Data', value: new Date(atelier.data).toLocaleDateString('ro-RO') },
                 { icon: clockIcon, label: 'Ora', value: atelier.ora?.slice(0, 5) },
-                { icon: participantIcon, label: 'Nr. participanti', value: atelier.nrparticipanti },
+                { icon: participantIcon, label: 'Nr. participanti admisi', value: atelier.locatie?.capacitate ?? '?' },
                 { icon: presentationIcon, label: 'Nivel', value: atelier.nivel || 'Incepator' },
               ].map((item, i) => (
                 <div key={i} className="col-md-6">
@@ -236,7 +236,7 @@ export default function DetaliiAtelier() {
               </div>
               <div className="d-flex align-items-center gap-2 mb-2">
                 <img src={participantIcon} alt="participanti" className="icon-meta icon-filter" />
-                <span className="atelier-side-text">{atelier.nrparticipanti} participanti inregistrati</span>
+                <span className="atelier-side-text">{atelier.nr_inscrisi ?? atelier.nrparticipanti} din {atelier.locatie?.capacitate ?? '?'} participanti inregistrati</span>
               </div>
               <div className="d-flex align-items-center gap-2">
                 <img src={presentationIcon} alt="tema" className="icon-meta icon-filter" />

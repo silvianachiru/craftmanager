@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
+import starIcon from '../assets/star.png'
 
 function ModalConfirmare({ text, onConfirm, onCancel }) {
   return (
@@ -38,6 +39,9 @@ export default function AdminDashboard() {
   const [notificare, setNotificare] = useState('')
   const [eroare, setEroare] = useState('')
   const [modal, setModal] = useState(null)
+  const [searchUtilizatori, setSearchUtilizatori] = useState('')
+  const [filtruInstructor, setFiltruInstructor] = useState('')
+  const [statistici, setStatistici] = useState(null)
 
   useEffect(() => {
     if (seIncarca) return
@@ -49,16 +53,18 @@ export default function AdminDashboard() {
 
   const incarcaDate = async () => {
     try {
-      const [r1, r2, r3, r4] = await Promise.all([
+      const [r1, r2, r3, r4, r5] = await Promise.all([
         axios.get(`${API}/admin/mesaje`, token()),
         axios.get(`${API}/admin/utilizatori`, token()),
         axios.get(`${API}/admin/ateliere`, token()),
         axios.get(`${API}/admin/categorii`, token()),
+        axios.get(`${API}/admin/statistici`, token()),
       ])
       setMesaje(r1.data)
       setUtilizatori(r2.data)
       setAteliere(r3.data.sort((a, b) => new Date(a.data) - new Date(b.data)))
       setCategorii(r4.data)
+      setStatistici(r5.data)
     } catch { navigate('/') }
   }
 
@@ -162,6 +168,7 @@ export default function AdminDashboard() {
             { key: 'mesaje', label: 'Mesaje', badge: necitite > 0 ? necitite : null, badgeColor: 'bg-danger' },
             { key: 'utilizatori', label: 'Utilizatori', badge: utilizatori.length, badgeColor: 'bg-secondary' },
             { key: 'ateliere', label: 'Ateliere', badge: ateliere.length, badgeColor: 'bg-secondary' },
+            { key: 'statistici', label: 'Statistici', badge: null },
           ].map(t => (
             <li key={t.key} className="nav-item">
               <button className={`nav-link ${tab === t.key ? 'active' : ''}`} onClick={() => schimbaTab(t.key)}>
@@ -251,45 +258,179 @@ export default function AdminDashboard() {
 
         {/* ── UTILIZATORI ── */}
         {tab === 'utilizatori' && (
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead><tr><th>Nume</th><th>Email</th><th>Tip</th><th>Inregistrat</th><th></th></tr></thead>
-              <tbody>
-                {utilizatori.map(u => (
-                  <tr key={u.idutilizator}>
-                    <td>{u.prenume} {u.nume}</td>
-                    <td>{u.email}</td>
-                    <td><span className={`badge ${u.tip === 'admin' ? 'bg-danger' : u.tip === 'instructor' ? 'bg-warning text-dark' : 'bg-success'}`}>{u.tip}</span></td>
-                    <td>{new Date(u.datacrearii).toLocaleDateString('ro-RO')}</td>
-                    <td>{u.tip !== 'admin' && <button className="btn btn-sm btn-outline-danger" onClick={() => stergeUtilizator(u.idutilizator)}>Sterge</button>}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <input
+              type="text"
+              className="form-control mb-3"
+              placeholder="Cauta dupa nume sau email..."
+              value={searchUtilizatori}
+              onChange={e => setSearchUtilizatori(e.target.value)}
+              style={{ maxWidth: '360px' }}
+            />
+            <div className="table-responsive">
+              <table className="table table-hover">
+                <thead><tr><th>Nume</th><th>Email</th><th>Tip</th><th>Inregistrat</th><th></th></tr></thead>
+                <tbody>
+                  {utilizatori
+                    .filter(u => {
+                      const q = searchUtilizatori.toLowerCase()
+                      return (
+                        `${u.prenume} ${u.nume}`.toLowerCase().includes(q) ||
+                        u.email.toLowerCase().includes(q)
+                      )
+                    })
+                    .map(u => (
+                      <tr key={u.idutilizator}>
+                        <td>{u.prenume} {u.nume}</td>
+                        <td>{u.email}</td>
+                        <td><span className={`badge ${u.tip === 'admin' ? 'bg-danger' : u.tip === 'instructor' ? 'bg-warning text-dark' : 'bg-success'}`}>{u.tip}</span></td>
+                        <td>{new Date(u.datacrearii).toLocaleDateString('ro-RO')}</td>
+                        <td>{u.tip !== 'admin' && <button className="btn btn-sm btn-outline-danger" onClick={() => stergeUtilizator(u.idutilizator)}>Sterge</button>}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {/* ── ATELIERE ── */}
-        {tab === 'ateliere' && (
-          <div className="table-responsive">
-            <table className="table table-hover">
-              <thead><tr><th>Denumire</th><th>Instructor</th><th>Data</th><th>Pret</th><th>Participanti</th><th></th></tr></thead>
-              <tbody>
-                {ateliere.map(a => (
-                  <tr key={a.idatelier}>
-                    <td>{a.denumire}</td>
-                    <td>{a.instructor}</td>
-                    <td>{new Date(a.data).toLocaleDateString('ro-RO')}</td>
-                    <td>{a.pret} RON</td>
-                    <td>{a.nrparticipanti}</td>
-                    <td><button className="btn btn-sm btn-outline-danger" onClick={() => stergeAtelier(a.idatelier)}>Sterge</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {tab === 'ateliere' && (() => {
+          const instructoriUnici = [...new Set(ateliere.map(a => a.instructor).filter(Boolean))]
+          const ateliereFiltrate = ateliere.filter(a =>
+            !filtruInstructor || a.instructor === filtruInstructor
+          )
+          return (
+            <div>
+              <div className="d-flex gap-2 mb-3 align-items-center">
+                <select
+                  className="form-select"
+                  style={{ maxWidth: '260px' }}
+                  value={filtruInstructor}
+                  onChange={e => setFiltruInstructor(e.target.value)}
+                >
+                  <option value="">Toti instructorii</option>
+                  {instructoriUnici.map(inst => (
+                    <option key={inst} value={inst}>{inst}</option>
+                  ))}
+                </select>
+                {filtruInstructor && (
+                  <button className="btn btn-sm btn-outline-secondary" onClick={() => setFiltruInstructor('')}>
+                    Reseteaza
+                  </button>
+                )}
+                <span className="text-muted" style={{ fontSize: '0.85rem' }}>
+                  {ateliereFiltrate.length} atelier{ateliereFiltrate.length !== 1 ? 'e' : ''}
+                </span>
+              </div>
+              <div className="table-responsive">
+                <table className="table table-hover">
+                  <thead><tr><th>Denumire</th><th>Instructor</th><th>Data</th><th>Pret</th><th>Participanti</th><th></th></tr></thead>
+                  <tbody>
+                    {ateliereFiltrate.map(a => (
+                      <tr key={a.idatelier}>
+                        <td>{a.denumire}</td>
+                        <td>{a.instructor}</td>
+                        <td>{new Date(a.data).toLocaleDateString('ro-RO')}</td>
+                        <td>{a.pret} RON</td>
+                        <td>{a.nrparticipanti}</td>
+                        <td><button className="btn btn-sm btn-outline-danger" onClick={() => stergeAtelier(a.idatelier)}>Sterge</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
+        })()}
+      </div>
+
+        {tab === 'statistici' && statistici && (
+          <div style={{ padding: '0 8px' }}>
+            <div className="row g-3 mb-5 justify-content-center">
+              {[
+                { label: 'Utilizatori', value: statistici.general.total_utilizatori, color: '#6c63ff' },
+                { label: 'Ateliere', value: statistici.general.total_ateliere, color: 'var(--roz)' },
+                { label: 'Inscrieri active', value: statistici.general.total_inscrieri, color: '#26a69a' },
+                { label: 'Au participat', value: statistici.general.total_participari, color: '#ef6c00' },
+                { label: 'Recenzii', value: statistici.general.total_recenzii, color: '#fbc02d' },
+              ].map(s => (
+                <div key={s.label} className="col-6 col-sm-4 col-md-2">
+                  <div className="card h-100 text-center" style={{ padding: '24px 12px', borderRadius: '16px' }}>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secundar)', marginTop: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{s.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="row g-4" style={{ marginLeft: 0, marginRight: 0 }}>
+              <div className="col-md-6">
+                <div className="card p-4">
+                  <h5 className="section-heading-sm mb-3">Instructori</h5>
+                  <table className="table table-hover mb-0">
+                    <thead>
+                      <tr>
+                        <th>Instructor</th>
+                        <th className="text-center">Ateliere totale</th>
+                        <th className="text-center">Rating</th>
+                        <th className="text-center">Recenzii</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...statistici.instructori].sort((a, b) => b.nr_ateliere - a.nr_ateliere).map((inst, i) => (
+                        <tr key={i}>
+                          <td>{inst.nume}</td>
+                          <td className="text-center">{inst.nr_ateliere}</td>
+                          <td className="text-center">
+                            {inst.rating_mediu > 0
+                              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: 'var(--text-principal)' }}>
+                                  <img src={starIcon} alt="star" style={{ width: '13px', height: '13px' }} />
+                                  {inst.rating_mediu.toFixed(1)}
+                                </span>
+                              : <span style={{ color: 'var(--text-secundar)' }}>—</span>}
+                          </td>
+                          <td className="text-center">{inst.nr_recenzii}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <div className="card p-4">
+                  <h5 className="section-heading-sm mb-3">Top 5 ateliere după rating</h5>
+                  <table className="table table-hover mb-0">
+                    <thead>
+                      <tr>
+                        <th>Atelier</th>
+                        <th>Instructor</th>
+                        <th className="text-center">Rating</th>
+                        <th className="text-center">Recenzii</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statistici.top_ateliere_rating.map((a, i) => (
+                        <tr key={i}>
+                          <td style={{ fontSize: '0.88rem' }}>{a.denumire}</td>
+                          <td style={{ fontSize: '0.88rem' }}>{a.instructor}</td>
+                          <td className="text-center">
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: 'var(--text-principal)' }}>
+                              <img src={starIcon} alt="star" style={{ width: '13px', height: '13px' }} />
+                              {a.rating_mediu.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="text-center">{a.nr_recenzii}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         )}
-      </div>
 
       {modal && <ModalConfirmare text={modal.text} onConfirm={modal.onConfirm} onCancel={() => setModal(null)} />}
     </>
