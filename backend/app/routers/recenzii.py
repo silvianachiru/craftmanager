@@ -10,12 +10,10 @@ from .auth import get_utilizator_curent
 
 router = APIRouter(prefix="/recenzii", tags=["Recenzii"])
 
-
 class RecenzieCreate(BaseModel):
     idinregistrare: int
     rating: int
     comentariu: Optional[str] = None
-
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def adauga_recenzie(
@@ -50,7 +48,6 @@ def adauga_recenzie(
     db.commit()
     return {"message": "Recenzie adaugata cu succes!"}
 
-
 @router.get("/atelier/{idatelier}")
 def recenzii_atelier(idatelier: int, db: Session = Depends(get_db)):
     rows = (
@@ -73,7 +70,6 @@ def recenzii_atelier(idatelier: int, db: Session = Depends(get_db)):
         for r, u in rows
     ]
 
-
 @router.get("/ale-mele")
 def recenziile_mele(
     db: Session = Depends(get_db),
@@ -84,9 +80,6 @@ def recenziile_mele(
     return db.query(Recenzie).join(Inregistrare).filter(
         Inregistrare.idparticipant == utilizator_curent.participant.idparticipant
     ).all()
-
-
-# ── Rezumat feedback ──────────────────────────────────────────────────────────
 
 def _build_feedback_prompt(comentarii: List[str]) -> str:
     lista = "\n".join(f"{i+1}. {c}" for i, c in enumerate(comentarii))
@@ -109,7 +102,6 @@ Returnează DOAR un obiect JSON valid, fără markdown, fără explicații, cu e
   "sugestii": ["sugestie 1", "sugestie 2", "sugestie 3"]
 }}"""
 
-
 def _call_ollama(prompt: str) -> dict:
     try:
         resp = http_requests.post(
@@ -130,7 +122,6 @@ def _call_ollama(prompt: str) -> dict:
         raise HTTPException(status_code=503, detail="Ollama nu este disponibil. Porneste Ollama local.")
     except (json.JSONDecodeError, KeyError):
         raise HTTPException(status_code=422, detail="Raspunsul LLM nu este JSON valid.")
-
 
 @router.get("/atelier/{idatelier}/rezumat")
 def get_rezumat(
@@ -158,7 +149,6 @@ def get_rezumat(
         "generat_la": rez.generat_la,
     }
 
-
 @router.post("/atelier/{idatelier}/rezumat")
 def genereaza_rezumat(
     idatelier: int,
@@ -169,7 +159,6 @@ def genereaza_rezumat(
     if not utilizator_curent.instructor:
         raise HTTPException(status_code=403, detail="Doar instructorii pot genera rezumate.")
 
-    # Verifică că atelierul aparține acestui instructor
     atelier = db.query(Atelier).filter(
         Atelier.idatelier == idatelier,
         Atelier.idinstructor == utilizator_curent.instructor.idinstructor,
@@ -177,7 +166,6 @@ def genereaza_rezumat(
     if not atelier:
         raise HTTPException(status_code=404, detail="Atelier negasit.")
 
-    # Ia toate comentariile pentru acest atelier
     rows = (
         db.query(Recenzie)
         .join(Inregistrare, Recenzie.idinregistrare == Inregistrare.idinregistrare)
@@ -191,7 +179,6 @@ def genereaza_rezumat(
     if not comentarii:
         raise HTTPException(status_code=400, detail="Nu exista comentarii text pentru acest atelier.")
 
-    # Apel LLM
     prompt = _build_feedback_prompt(comentarii)
     data = _call_ollama(prompt)
 
@@ -199,7 +186,6 @@ def genereaza_rezumat(
     if not required.issubset(data.keys()):
         raise HTTPException(status_code=422, detail="Structura JSON returnata de LLM este incompleta.")
 
-    # Salvează în DB
     rez = RezumatFeedback(
         idatelier=idatelier,
         rezumat_general=data["rezumat_general"],

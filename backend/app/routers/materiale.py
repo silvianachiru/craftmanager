@@ -9,21 +9,17 @@ from .auth import get_utilizator_curent
 
 router = APIRouter(prefix="/materiale", tags=["Materiale"])
 
-
 class MaterialSchema(BaseModel):
     denumire: str
     pret: float
-
 
 class MaterialUpdateSchema(BaseModel):
     denumire: Optional[str] = None
     pret: Optional[float] = None
 
-
 class UtilizareSchema(BaseModel):
     idmaterial: int
     cantitate: int
-
 
 def get_instructor(utilizator, db):
     instructor = db.query(Instructor).filter(Instructor.idutilizator == utilizator.idutilizator).first()
@@ -31,13 +27,11 @@ def get_instructor(utilizator, db):
         raise HTTPException(status_code=403, detail="Doar instructorii pot gestiona materialele.")
     return instructor
 
-
 @router.get("")
 def get_materiale_instructor(db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
     instructor = get_instructor(utilizator, db)
     materiale = db.query(Materiale).filter(Materiale.idinstructor == instructor.idinstructor).order_by(Materiale.denumire).all()
     return [{"idmaterial": m.idmaterial, "denumire": m.denumire, "pret": float(m.pret)} for m in materiale]
-
 
 @router.post("", status_code=201)
 def adauga_material(data: MaterialSchema, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
@@ -49,7 +43,6 @@ def adauga_material(data: MaterialSchema, db: Session = Depends(get_db), utiliza
     db.commit()
     db.refresh(m)
     return {"idmaterial": m.idmaterial, "denumire": m.denumire, "pret": float(m.pret)}
-
 
 @router.patch("/{idmaterial}")
 def update_material(idmaterial: int, data: MaterialUpdateSchema, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
@@ -64,7 +57,6 @@ def update_material(idmaterial: int, data: MaterialUpdateSchema, db: Session = D
     db.commit()
     return {"idmaterial": m.idmaterial, "denumire": m.denumire, "pret": float(m.pret)}
 
-
 @router.delete("/{idmaterial}")
 def sterge_material(idmaterial: int, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
     instructor = get_instructor(utilizator, db)
@@ -77,9 +69,12 @@ def sterge_material(idmaterial: int, db: Session = Depends(get_db), utilizator=D
     db.commit()
     return {"message": "Material sters."}
 
-
 @router.get("/atelier/{idatelier}")
 def get_materiale_atelier(idatelier: int, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
+    instructor = get_instructor(utilizator, db)
+    atelier = db.query(Atelier).filter(Atelier.idatelier == idatelier, Atelier.idinstructor == instructor.idinstructor).first()
+    if not atelier:
+        raise HTTPException(status_code=404, detail="Atelierul nu a fost gasit.")
     utilizari = db.query(Utilizare).filter(Utilizare.idatelier == idatelier).all()
     return [{
         "idutilizare": u.idutilizare,
@@ -89,7 +84,6 @@ def get_materiale_atelier(idatelier: int, db: Session = Depends(get_db), utiliza
         "cantitate": int(u.cantitate),
         "total": round(float(u.material.pret) * float(u.cantitate), 2),
     } for u in utilizari]
-
 
 @router.post("/atelier/{idatelier}", status_code=201)
 def asociaza_material(idatelier: int, data: UtilizareSchema, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
@@ -105,7 +99,6 @@ def asociaza_material(idatelier: int, data: UtilizareSchema, db: Session = Depen
     db.commit()
     return {"message": "Material asociat."}
 
-
 @router.delete("/atelier/{idatelier}/{idutilizare}")
 def sterge_asociere(idatelier: int, idutilizare: int, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
     instructor = get_instructor(utilizator, db)
@@ -119,7 +112,6 @@ def sterge_asociere(idatelier: int, idutilizare: int, db: Session = Depends(get_
     db.commit()
     return {"message": "Material eliminat."}
 
-
 @router.post("/atelier/{idatelier}/salveaza")
 def salveaza_materiale(idatelier: int, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
     instructor = get_instructor(utilizator, db)
@@ -129,7 +121,6 @@ def salveaza_materiale(idatelier: int, db: Session = Depends(get_db), utilizator
     atelier.materiale_salvate = True
     db.commit()
     return {"materiale_salvate": True}
-
 
 @router.post("/atelier/{idatelier}/editeaza")
 def editeaza_materiale(idatelier: int, db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
@@ -141,7 +132,6 @@ def editeaza_materiale(idatelier: int, db: Session = Depends(get_db), utilizator
     db.commit()
     return {"materiale_salvate": False}
 
-
 @router.get("/raport-financiar")
 def raport_financiar(db: Session = Depends(get_db), utilizator=Depends(get_utilizator_curent)):
     instructor = get_instructor(utilizator, db)
@@ -151,23 +141,19 @@ def raport_financiar(db: Session = Depends(get_db), utilizator=Depends(get_utili
     from datetime import datetime
     now = datetime.now()
 
-    # Doar ateliere incheiate
     def filtru_incheiate(q):
         return q.filter(Atelier.idinstructor == iid).filter(
             func.cast(func.concat(Atelier.data, ' ', Atelier.ora), DateTime) < now
         )
 
-    # Total cheltuit pe materiale (doar ateliere incheiate)
     total_cheltuit = db.query(
         func.coalesce(func.sum(Utilizare.cantitate * Materiale.pret), 0)
     ).join(Materiale, Utilizare.idmaterial == Materiale.idmaterial)     .join(Atelier, Utilizare.idatelier == Atelier.idatelier)     .filter(Atelier.idinstructor == iid)     .filter(func.cast(func.concat(Atelier.data, ' ', Atelier.ora), DateTime) < now).scalar()
 
-    # Total castigat (participari efective, doar ateliere incheiate)
     total_castigat = db.query(
         func.coalesce(func.sum(Atelier.pret), 0)
     ).join(Inregistrare, Atelier.idatelier == Inregistrare.idatelier)     .filter(Atelier.idinstructor == iid)     .filter(Inregistrare.status == 'Participare')     .filter(func.cast(func.concat(Atelier.data, ' ', Atelier.ora), DateTime) < now).scalar()
 
-    # Detalii per atelier (doar incheiate)
     ateliere = db.query(Atelier).filter(Atelier.idinstructor == iid)        .filter(func.cast(func.concat(Atelier.data, ' ', Atelier.ora), DateTime) < now)        .order_by(Atelier.data.desc()).all()
     detalii = []
     for a in ateliere:

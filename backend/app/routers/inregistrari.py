@@ -8,10 +8,8 @@ from .auth import get_utilizator_curent
 
 router = APIRouter(prefix="/inregistrari", tags=["Inregistrari"])
 
-
 class InregistrareCreate(BaseModel):
     idatelier: int
-
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 def inscriere(
@@ -55,7 +53,6 @@ def inscriere(
     db.commit()
     return {"message": "Inscris cu succes!"}
 
-
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def anulare(
     id: int,
@@ -79,7 +76,6 @@ def anulare(
     inregistrare.status = "Anulare"
     db.commit()
 
-
 @router.get("/ale-mele")
 def inregistrarile_mele(
     db: Session = Depends(get_db),
@@ -93,7 +89,6 @@ def inregistrarile_mele(
     ).filter(
         Inregistrare.idparticipant == utilizator_curent.participant.idparticipant
     ).all()
-
 
 @router.get("/atelier/{idatelier}")
 def participanti_atelier(
@@ -128,7 +123,6 @@ def participanti_atelier(
         for i in inregistrari
     ]
 
-
 @router.put("/{id}/participare", status_code=200)
 def marcare_participare(
     id: int,
@@ -148,6 +142,8 @@ def marcare_participare(
 
     if inregistrare.status == 'Participare':
         raise HTTPException(status_code=400, detail="Participarea a fost deja marcata")
+    if inregistrare.status != 'Inscriere':
+        raise HTTPException(status_code=400, detail="Inscrierea a fost anulata si nu poate fi marcata ca participare")
 
     inregistrare.status = "Participare"
     atelier.nrparticipanti += 1

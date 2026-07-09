@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
-import { telefonValid, numeValid } from '../utils/validare'
+import { telefonValid, numeValid, extrageEroare } from '../utils/validare'
 
 export default function ContulMeu() {
   const { utilizator, tip, seIncarca, logout } = useAuth()
@@ -14,19 +14,16 @@ export default function ContulMeu() {
   const [loadingRaport, setLoadingRaport] = useState(false)
   const [showDetalii, setShowDetalii] = useState(false)
 
-  // Editare profil
   const [editMode, setEditMode] = useState(false)
   const [form, setForm] = useState({})
   const [savingProfil, setSavingProfil] = useState(false)
   const [mesajProfil, setMesajProfil] = useState('')
 
-  // Schimbare parola
   const [parolaForm, setParolaForm] = useState({ veche: '', noua: '', confirma: '' })
   const [savingParola, setSavingParola] = useState(false)
   const [mesajParola, setMesajParola] = useState('')
   const [eroareParola, setEroareParola] = useState('')
 
-  // Stergere cont
   const [showModalStergere, setShowModalStergere] = useState(false)
   const [stergeInCurs, setStergeInCurs] = useState(false)
   const [eroareStergere, setEroareStergere] = useState('')
@@ -88,7 +85,7 @@ export default function ContulMeu() {
       setEditMode(false)
       setMesajProfil('Profil actualizat cu succes.')
     } catch (err) {
-      setMesajProfil(err.response?.data?.detail || 'Nu s-a putut salva profilul.')
+      setMesajProfil(extrageEroare(err, 'Nu s-a putut salva profilul.'))
     } finally {
       setSavingProfil(false)
     }
@@ -110,7 +107,7 @@ export default function ContulMeu() {
       setParolaForm({ veche: '', noua: '', confirma: '' })
       setMesajParola('Parola schimbata cu succes.')
     } catch (err) {
-      setEroareParola(err.response?.data?.detail || 'Nu s-a putut schimba parola.')
+      setEroareParola(extrageEroare(err, 'Nu s-a putut schimba parola.'))
     } finally {
       setSavingParola(false)
     }
@@ -124,7 +121,7 @@ export default function ContulMeu() {
       logout()
       navigate('/')
     } catch (err) {
-      setEroareStergere(err.response?.data?.detail || 'Nu s-a putut sterge contul. Incearca din nou.')
+      setEroareStergere(extrageEroare(err, 'Nu s-a putut sterge contul. Incearca din nou.'))
       setStergeInCurs(false)
     }
   }
@@ -162,7 +159,6 @@ export default function ContulMeu() {
           <div className="alert alert-success py-2 mb-4">{mesajProfil}</div>
         )}
 
-        {/* Date personale */}
         <div className="card p-4 mb-4">
           <div className="d-flex justify-content-between align-items-center" style={{ marginBottom: '20px' }}>
             <h5 style={{ margin: 0 }}>Date personale</h5>
@@ -261,7 +257,6 @@ export default function ContulMeu() {
           )}
         </div>
 
-        {/* Participant (doar vizualizare; editarea e in cardul de mai sus) */}
         {tip === 'participant' && !editMode && (
           <div className="card p-4 mb-4">
             <h5 style={{ marginBottom: '20px' }}>Detalii cont participant</h5>
@@ -272,7 +267,6 @@ export default function ContulMeu() {
           </div>
         )}
 
-        {/* Instructor info (doar vizualizare) */}
         {tip === 'instructor' && !editMode && (
           <div className="card p-4 mb-4">
             <h5 style={{ marginBottom: '20px' }}>Detalii cont instructor</h5>
@@ -296,7 +290,6 @@ export default function ContulMeu() {
           </div>
         )}
 
-        {/* Schimbare parola */}
         <div className="card p-4 mb-4">
           <h5 style={{ marginBottom: '4px' }}>Schimba parola</h5>
           <p style={{ ...labelStil, marginBottom: '20px' }}>Foloseste o parola de minim 6 caractere.</p>
@@ -331,7 +324,6 @@ export default function ContulMeu() {
           </div>
         </div>
 
-        {/* Stergere cont */}
         <div className="card p-4 mb-4" style={{ border: '1px solid #fecaca' }}>
           <h5 style={{ marginBottom: '4px', color: '#991b1b' }}>Sterge contul</h5>
           <p style={{ ...labelStil, marginBottom: '16px' }}>
@@ -348,7 +340,6 @@ export default function ContulMeu() {
           </button>
         </div>
 
-        {/* Raport financiar instructor */}
         {tip === 'instructor' && (
           <div className="card p-4">
             <h5 style={{ marginBottom: '4px' }}>Raport financiar</h5>
@@ -362,7 +353,6 @@ export default function ContulMeu() {
               </div>
             ) : raport ? (
               <>
-                {/* Carduri sumar */}
                 <div className="row g-3 mb-4">
                   <div className="col-4">
                     <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
@@ -393,7 +383,6 @@ export default function ContulMeu() {
                   </div>
                 </div>
 
-                {/* Detalii per atelier */}
                 {raport.ateliere.length > 0 && (
                   <>
                     <button type="button"
@@ -450,7 +439,6 @@ export default function ContulMeu() {
         )}
       </div>
 
-      {/* Modal confirmare stergere */}
       {showModalStergere && (
         <div style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',

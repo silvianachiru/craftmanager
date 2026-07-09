@@ -23,7 +23,6 @@ h1, h2, h3, h4, h5 {
   font-family: 'Playfair Display', serif;
 }
 
-/* ===== NAVBAR ===== */
 .navbar {
   background-color: #fef2f5 !important;
   border-bottom: 1px solid var(--border);
@@ -47,7 +46,6 @@ h1, h2, h3, h4, h5 {
   color: var(--roz) !important;
 }
 
-/* ===== BUTOANE ===== */
 .btn-primary {
   background-color: var(--roz);
   border-color: var(--roz);
@@ -81,7 +79,6 @@ h1, h2, h3, h4, h5 {
   transform: translateY(-1px);
 }
 
-/* ===== CARDURI ===== */
 .card {
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -109,7 +106,6 @@ h1, h2, h3, h4, h5 {
   border-radius: 16px 16px 0 0;
 }
 
-/* ===== FORMULARE ===== */
 .form-control, .form-select {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -124,7 +120,6 @@ h1, h2, h3, h4, h5 {
   box-shadow: 0 0 0 3px rgba(242, 167, 187, 0.15);
 }
 
-/* ===== BADGES ===== */
 .badge-categorie {
   background-color: var(--lavanda);
   color: #6b5b9e;
@@ -143,7 +138,6 @@ h1, h2, h3, h4, h5 {
   font-weight: 500;
 }
 
-/* ===== ALERTE ===== */
 .alert-danger {
   background-color: #fde8ee;
   border-color: var(--roz);
@@ -158,7 +152,6 @@ h1, h2, h3, h4, h5 {
   border-radius: 10px;
 }
 
-/* ===== HERO ===== */
 .hero-section {
   background-image: linear-gradient(
     rgba(30, 15, 20, 0.45),
@@ -187,7 +180,6 @@ h1, h2, h3, h4, h5 {
   text-shadow: 0 1px 6px rgba(0,0,0,0.15);
 }
 
-/* ===== GRADIENT PAGINI ===== */
 .page-header {
   background: linear-gradient(135deg, var(--roz-deschis), var(--lavanda));
   padding: 60px 20px;
@@ -198,7 +190,6 @@ h1, h2, h3, h4, h5 {
   padding: 48px 20px;
 }
 
-/* ===== SEARCH BAR ===== */
 .search-bar {
   background: white;
   border-radius: 50px;
@@ -250,7 +241,6 @@ h1, h2, h3, h4, h5 {
   filter: invert(30%) sepia(20%) saturate(300%) hue-rotate(240deg);
 }
 
-/* ===== PAGINA ATELIERE ===== */
 .ateliere-page {
   min-height: 100vh;
   background: var(--crem);
@@ -328,7 +318,6 @@ h1, h2, h3, h4, h5 {
   color: var(--text-secundar);
 }
 
-/* ===== DIVERSE ===== */
 .search-icon {
   font-size: 1rem;
 }
@@ -413,7 +402,6 @@ h1, h2, h3, h4, h5 {
   color: var(--text-principal);
 }
 
-/* ===== ICONITE ===== */
 .icon-sm {
   width: 14px;
   height: 14px;
@@ -477,7 +465,6 @@ h1, h2, h3, h4, h5 {
   margin-right: 8px;
 }
 
-/* ===== SECTIUNI REUTILIZABILE ===== */
 .section-heading-lg {
   color: var(--text-principal);
   margin-bottom: 24px;
@@ -517,7 +504,6 @@ h1, h2, h3, h4, h5 {
   margin: 12px 0;
 }
 
-/* ===== HERO COMUN ===== */
 .page-hero {
   position: relative;
   height: 420px;
@@ -559,7 +545,6 @@ h1, h2, h3, h4, h5 {
   max-width: 500px;
 }
 
-/* ===== CONTACT ===== */
 .contact-page {
   min-height: 100vh;
   background: var(--crem);
@@ -584,7 +569,6 @@ h1, h2, h3, h4, h5 {
   font-size: 0.9rem;
 }
 
-/* ===== DESPRE ===== */
 .despre-page {
   min-height: 100vh;
   background: var(--crem);
@@ -618,7 +602,6 @@ h1, h2, h3, h4, h5 {
   margin-bottom: 24px;
 }
 
-/* ===== DETALII ATELIER ===== */
 .atelier-details-page {
   min-height: 100vh;
   background: var(--crem);
@@ -722,7 +705,6 @@ h1, h2, h3, h4, h5 {
   color: var(--text-principal);
 }
 
-/* ===== DASHBOARD ===== */
 .dashboard-page {
   min-height: 100vh;
   background: var(--crem);

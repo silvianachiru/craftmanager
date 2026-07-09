@@ -8,7 +8,6 @@ from .auth import get_admin_curent, anonimizeaza_cont
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
-
 @router.get("/utilizatori")
 def get_utilizatori(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
     utilizatori = db.query(Utilizator).filter(Utilizator.sters == False).all()
@@ -31,7 +30,6 @@ def get_utilizatori(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
         })
     return rezultat
 
-
 @router.delete("/utilizatori/{id}")
 def sterge_utilizator(id: int, db: Session = Depends(get_db), admin=Depends(get_admin_curent)):
     if id == admin.idutilizator:
@@ -40,11 +38,8 @@ def sterge_utilizator(id: int, db: Session = Depends(get_db), admin=Depends(get_
     if not utilizator or utilizator.sters:
         raise HTTPException(status_code=404, detail="Utilizatorul nu a fost gasit.")
 
-    # Anonimizare: datele personale sunt eliminate, dar contul, recenziile si atelierele raman.
-    # Ridica 400 daca instructorul are ateliere active sau participantul are inscrieri active.
     anonimizeaza_cont(utilizator, db)
     return {"message": "Cont sters. Recenziile au fost pastrate."}
-
 
 @router.get("/ateliere")
 def get_ateliere(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
@@ -55,23 +50,23 @@ def get_ateliere(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
         "data": a.data,
         "ora": a.ora,
         "pret": float(a.pret),
-        "nrparticipanti": a.nrparticipanti,
+        "nrparticipanti": sum(1 for i in a.inregistrari if i.status != 'Anulare'),
         "tema": a.tema.denumire if a.tema else None,
         "categorie": a.tema.categorie.denumire if a.tema and a.tema.categorie else None,
         "locatie": a.locatie.oras if a.locatie else None,
         "instructor": f"{a.instructor.utilizator.prenume} {a.instructor.utilizator.nume}" if a.instructor else None,
     } for a in ateliere]
 
-
 @router.delete("/ateliere/{id}")
 def sterge_atelier(id: int, db: Session = Depends(get_db), _=Depends(get_admin_curent)):
     atelier = db.query(Atelier).filter(Atelier.idatelier == id).first()
     if not atelier:
         raise HTTPException(status_code=404, detail="Atelierul nu a fost gasit.")
+    if any(i.status != 'Anulare' for i in atelier.inregistrari):
+        raise HTTPException(status_code=400, detail="Atelierul are participanti inscrisi si nu poate fi sters.")
     db.delete(atelier)
     db.commit()
     return {"message": "Atelier sters."}
-
 
 @router.get("/mesaje")
 def get_mesaje(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
@@ -86,7 +81,6 @@ def get_mesaje(db: Session = Depends(get_db), _=Depends(get_admin_curent)):
         "citit": m.citit,
     } for m in mesaje]
 
-
 @router.patch("/mesaje/{id}/citit")
 def marcheaza_citit(id: int, db: Session = Depends(get_db), _=Depends(get_admin_curent)):
     mesaj = db.query(MesajContact).filter(MesajContact.idmesaj == id).first()
@@ -95,7 +89,6 @@ def marcheaza_citit(id: int, db: Session = Depends(get_db), _=Depends(get_admin_
     mesaj.citit = True
     db.commit()
     return {"message": "Marcat ca citit."}
-
 
 @router.delete("/mesaje/{id}")
 def sterge_mesaj(id: int, db: Session = Depends(get_db), _=Depends(get_admin_curent)):
@@ -106,8 +99,6 @@ def sterge_mesaj(id: int, db: Session = Depends(get_db), _=Depends(get_admin_cur
     db.commit()
     return {"message": "Mesaj sters."}
 
-
-# ── Categorii ──────────────────────────────────────────────
 class CategorieSchema(BaseModel):
     denumire: str
 
@@ -161,7 +152,6 @@ def sterge_tema(id: int, db: Session = Depends(get_db), _=Depends(get_admin_cure
     db.delete(tema)
     db.commit()
     return {"message": "Tema stearsa."}
-
 
 @router.get("/statistici")
 def get_statistici(db: Session = Depends(get_db), _=Depends(get_admin_curent)):

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { extrageEroare } from '../utils/validare'
 import calendarIcon from '../assets/calendar.png'
 import clockIcon from '../assets/clock.png'
 import locationIcon from '../assets/location.png'
@@ -17,14 +18,14 @@ const getAtelierDateTime = (atelier) => {
 }
 
 export default function InscrierileMele() {
-  const { utilizator, tip, seIncarca } = useAuth()
+  const { utilizator, tip } = useAuth()
   const navigate = useNavigate()
   const [inregistrari, setInregistrari] = useState([])
   const [loading, setLoading] = useState(true)
   const [mesaj, setMesaj] = useState('')
   const [eroare, setEroare] = useState('')
   const [anulareId, setAnulareId] = useState(null)
-  const [recenzieModal, setRecenzieModal] = useState(null) // idinregistrare
+  const [recenzieModal, setRecenzieModal] = useState(null)
   const [rating, setRating] = useState(5)
   const [comentariu, setComentariu] = useState('')
   const [recenziiAdaugate, setRecenziiAdaugate] = useState(new Set())
@@ -58,7 +59,7 @@ export default function InscrierileMele() {
       setMesaj('Inscrierea a fost anulata.')
       setTimeout(() => setMesaj(''), 3000)
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la anulare')
+      setEroare(extrageEroare(err, 'Eroare la anulare'))
       setAnulareId(null)
       setTimeout(() => setEroare(''), 3000)
     }
@@ -78,7 +79,7 @@ export default function InscrierileMele() {
       setMesaj('Recenzia a fost adaugata!')
       setTimeout(() => setMesaj(''), 3000)
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la adaugarea recenziei')
+      setEroare(extrageEroare(err, 'Eroare la adaugarea recenziei'))
       setTimeout(() => setEroare(''), 3000)
     }
   }
@@ -113,7 +114,6 @@ export default function InscrierileMele() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--crem)' }}>
 
-      {/* MODAL ANULARE */}
       {anulareId && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(61,44,53,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="card p-4" style={{ maxWidth: '420px', width: '90%', borderRadius: '20px' }}>
@@ -136,7 +136,6 @@ export default function InscrierileMele() {
         </div>
       )}
 
-      {/* MODAL RECENZIE */}
       {recenzieModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(61,44,53,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="card p-4" style={{ maxWidth: '480px', width: '90%', borderRadius: '20px' }}>
@@ -206,7 +205,6 @@ export default function InscrierileMele() {
           </div>
         ) : (
           <>
-            {/* TABS */}
             <div style={{ borderBottom: '1px solid var(--border)', marginBottom: '32px', display: 'flex', gap: '4px' }}>
               {[
                 { key: 'active', label: 'Inscrieri active', count: inscrieriActive.length },
@@ -232,7 +230,6 @@ export default function InscrierileMele() {
               ))}
             </div>
 
-            {/* INSCRIERI ACTIVE */}
             {tabActiv === 'active' && (inscrieriActive.length === 0 ? (
               <div className="card p-4">
                 <p style={{ color: 'var(--text-secundar)', margin: 0 }}>Nu ai inscrieri active in acest moment.</p>
@@ -318,7 +315,6 @@ export default function InscrierileMele() {
               </div>
             ))}
 
-            {/* ATELIERE TRECUTE */}
             {tabActiv === 'trecute' && (inscrieriTrecute.length === 0 ? (
               <div className="card p-4">
                 <p style={{ color: 'var(--text-secundar)', margin: 0 }}>Nu ai inca ateliere trecute.</p>

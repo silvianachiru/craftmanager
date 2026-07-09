@@ -37,6 +37,10 @@ def create_locatie(data: LocatieCreate, db: Session = Depends(get_db)):
         Locatie.oras == data.oras
     ).first()
     if existenta:
+        if existenta.capacitate != data.capacitate:
+            existenta.capacitate = data.capacitate
+            db.commit()
+            db.refresh(existenta)
         return existenta
     
     locatie = Locatie(**data.model_dump())

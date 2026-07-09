@@ -11,7 +11,6 @@ from .auth import get_utilizator_curent
 
 router = APIRouter(prefix="/ateliere", tags=["Ateliere"])
 
-
 class AtelierCreate(BaseModel):
     denumire: str
     descriere: Optional[str] = None
@@ -25,7 +24,6 @@ class AtelierCreate(BaseModel):
     idtema: int
     idlocatie: int
 
-
 class LocatieResponse(BaseModel):
     idlocatie: int
     nume: str
@@ -34,12 +32,10 @@ class LocatieResponse(BaseModel):
     capacitate: int
     model_config = {"from_attributes": True}
 
-
 class UtilizatorSimplificat(BaseModel):
     nume: str
     prenume: str
     model_config = {"from_attributes": True}
-
 
 class InstructorResponse(BaseModel):
     idinstructor: int
@@ -48,12 +44,10 @@ class InstructorResponse(BaseModel):
     utilizator: Optional[UtilizatorSimplificat] = None
     model_config = {"from_attributes": True}
 
-
 class TemaResponse(BaseModel):
     idtema: int
     denumire: str
     model_config = {"from_attributes": True}
-
 
 class AtelierResponse(BaseModel):
     idatelier: int
@@ -77,14 +71,12 @@ class AtelierResponse(BaseModel):
     tema: Optional[TemaResponse] = None
     model_config = {"from_attributes": True}
 
-
 def query_cu_relatii(db: Session):
     return db.query(Atelier).options(
         joinedload(Atelier.locatie),
         joinedload(Atelier.instructor).joinedload(Instructor.utilizator),
         joinedload(Atelier.tema)
     )
-
 
 @router.get("/toate-ale-mele/", response_model=List[AtelierResponse])
 def get_toate_atelierele_mele(
@@ -96,7 +88,6 @@ def get_toate_atelierele_mele(
     return query_cu_relatii(db).filter(
         Atelier.idinstructor == utilizator_curent.instructor.idinstructor
     ).order_by(Atelier.data.desc()).all()
-
 
 @router.get("/", response_model=List[AtelierResponse])
 def get_ateliere(
@@ -121,14 +112,12 @@ def get_ateliere(
         query = query.join(Tema).filter(Tema.idcategorie == categorie)
     return query.all()
 
-
 @router.get("/{id}", response_model=AtelierResponse)
 def get_atelier(id: int, db: Session = Depends(get_db)):
     atelier = query_cu_relatii(db).filter(Atelier.idatelier == id).first()
     if not atelier:
         raise HTTPException(status_code=404, detail="Atelier negasit")
     return atelier
-
 
 @router.post("/", response_model=AtelierResponse, status_code=status.HTTP_201_CREATED)
 def create_atelier(
@@ -147,7 +136,6 @@ def create_atelier(
     db.commit()
     db.refresh(atelier)
     return query_cu_relatii(db).filter(Atelier.idatelier == atelier.idatelier).first()
-
 
 @router.put("/{id}", response_model=AtelierResponse)
 def update_atelier(
@@ -168,7 +156,6 @@ def update_atelier(
     db.commit()
     return query_cu_relatii(db).filter(Atelier.idatelier == id).first()
 
-
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_atelier(
     id: int,
@@ -180,6 +167,8 @@ def delete_atelier(
         raise HTTPException(status_code=404, detail="Atelier negasit")
     if atelier.idinstructor != utilizator_curent.instructor.idinstructor:
         raise HTTPException(status_code=403, detail="Nu ai permisiunea sa stergi acest atelier")
+    if any(i.status != 'Anulare' for i in atelier.inregistrari):
+        raise HTTPException(status_code=400, detail="Atelierul are participanti inscrisi si nu poate fi sters.")
 
     db.delete(atelier)
     db.commit()

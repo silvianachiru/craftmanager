@@ -7,7 +7,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base
 
-
 class Utilizator(Base):
     __tablename__ = "utilizator"
     idutilizator = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -22,7 +21,6 @@ class Utilizator(Base):
     instructor = relationship("Instructor", back_populates="utilizator", uselist=False)
     administrator = relationship("Administrator", back_populates="utilizator", uselist=False)
 
-
 class Participant(Base):
     __tablename__ = "participant"
     idparticipant = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -34,7 +32,6 @@ class Participant(Base):
         CheckConstraint("varsta BETWEEN 1 AND 120", name="ck_participant_varsta"),
     )
 
-
 class Instructor(Base):
     __tablename__ = "instructor"
     idinstructor = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -43,7 +40,6 @@ class Instructor(Base):
     idutilizator = Column(BigInteger, ForeignKey("utilizator.idutilizator", ondelete="CASCADE"), nullable=False, unique=True)
     utilizator = relationship("Utilizator", back_populates="instructor")
     ateliere = relationship("Atelier", back_populates="instructor")
-
 
 class Locatie(Base):
     __tablename__ = "locatie"
@@ -58,13 +54,11 @@ class Locatie(Base):
         CheckConstraint("capacitate BETWEEN 1 AND 5000", name="ck_locatie_capacitate"),
     )
 
-
 class Categorie(Base):
     __tablename__ = "categorie"
     idcategorie = Column(BigInteger, primary_key=True, autoincrement=True)
     denumire = Column(String(200), nullable=False, unique=True)
     teme = relationship("Tema", back_populates="categorie")
-
 
 class Tema(Base):
     __tablename__ = "tema"
@@ -77,7 +71,6 @@ class Tema(Base):
         UniqueConstraint("denumire", "idcategorie", name="uq_tema"),
     )
 
-
 class Materiale(Base):
     __tablename__ = "materiale"
     idmaterial = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -88,7 +81,6 @@ class Materiale(Base):
     __table_args__ = (
         CheckConstraint("pret >= 0", name="ck_materiale_pret"),
     )
-
 
 class Atelier(Base):
     __tablename__ = "atelier"
@@ -111,11 +103,11 @@ class Atelier(Base):
     nivel = Column(String(20), nullable=False, default="Incepator")
     materiale_salvate = Column(Boolean, nullable=False, default=False)
     inregistrari = relationship("Inregistrare", back_populates="atelier")
+    utilizari = relationship("Utilizare", back_populates="atelier", cascade="all, delete-orphan")
 
     @property
     def nr_inscrisi(self):
         return sum(1 for i in self.inregistrari if i.status == 'Inscriere')
-    utilizari = relationship("Utilizare", back_populates="atelier")
     __table_args__ = (
         CheckConstraint("pret >= 0", name="ck_atelier_pret"),
         CheckConstraint("varstamin BETWEEN 1 AND 120 AND varstamax BETWEEN 1 AND 120 AND varstamin <= varstamax", name="ck_atelier_varste"),
@@ -123,7 +115,6 @@ class Atelier(Base):
         CheckConstraint("nrparticipanti >= 0", name="ck_atelier_nrparticipanti"),
         UniqueConstraint("denumire", "data", "ora", "idlocatie", name="uq_atelier_semantic"),
     )
-
 
 class Inregistrare(Base):
     __tablename__ = "inregistrare"
@@ -140,7 +131,6 @@ class Inregistrare(Base):
         CheckConstraint("status IN ('Inscriere', 'Participare', 'Anulare')", name="ck_inregistrare_status"),
     )
 
-
 class Recenzie(Base):
     __tablename__ = "recenzie"
     idrecenzie = Column(BigInteger, primary_key=True, autoincrement=True)
@@ -152,7 +142,6 @@ class Recenzie(Base):
     __table_args__ = (
         CheckConstraint("rating BETWEEN 1 AND 5", name="ck_recenzie_rating"),
     )
-
 
 class Utilizare(Base):
     __tablename__ = "utilizare"
@@ -168,7 +157,6 @@ class Administrator(Base):
     idadministrator = Column(BigInteger, primary_key=True, autoincrement=True)
     idutilizator = Column(BigInteger, ForeignKey("utilizator.idutilizator", ondelete="CASCADE"), nullable=False, unique=True)
     utilizator = relationship("Utilizator", back_populates="administrator")
-
 
 class MesajContact(Base):
     __tablename__ = "mesaj_contact"

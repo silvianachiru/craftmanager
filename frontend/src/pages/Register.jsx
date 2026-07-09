@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import api from '../services/api'
-import { emailValid, telefonValid, numeValid } from '../utils/validare'
+import { emailValid, telefonValid, numeValid, extrageEroare } from '../utils/validare'
 import participantIcon from '../assets/participant.png'
 import letterIcon from '../assets/letter.png'
 import phoneIcon from '../assets/phone-call.png'
@@ -64,13 +64,14 @@ export default function Register() {
     if (err) { setEroare(err); return }
     setLoading(true)
     try {
-      const payload = { ...form }
+      const payload = { ...form, nrtelefon: form.nrtelefon || null }
       if (form.tip === 'participant') payload.varsta = parseInt(form.varsta)
+      else delete payload.varsta
       await api.post('/auth/register', payload)
       setSuccess('Cont creat cu succes!')
       setTimeout(() => navigate('/login'), 2000)
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la inregistrare')
+      setEroare(extrageEroare(err, 'Eroare la inregistrare'))
     } finally {
       setLoading(false)
     }

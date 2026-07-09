@@ -10,10 +10,7 @@ import locationIcon from '../assets/location.png'
 import presentationIcon from '../assets/presentation.png'
 import { getIconAtelier } from '../utils/iconAtelier'
 
-
-
 const azi = new Date().toISOString().split('T')[0]
-
 
 export default function Ateliere() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -41,12 +38,6 @@ export default function Ateliere() {
     api.get('/categorii/').then(res => setCategorii(res.data)).catch(() => {})
   }, [])
 
-  useEffect(() => {
-    const catDinUrl = searchParams.get('categorie') ? parseInt(searchParams.get('categorie')) : null
-    setCategorieActiva(catDinUrl)
-    incarcaAteliere(filtre, catDinUrl)
-  }, [searchParams])
-
   const incarcaAteliere = (filtreNoi = filtre, categorie = categorieActiva) => {
     setLoading(true)
     const params = new URLSearchParams()
@@ -57,6 +48,12 @@ export default function Ateliere() {
     const url = `/ateliere/${params.toString() ? '?' + params.toString() : ''}`
     api.get(url).then(res => setAteliere(res.data.sort((a, b) => new Date(a.data) - new Date(b.data)))).finally(() => setLoading(false))
   }
+
+  useEffect(() => {
+    const catDinUrl = searchParams.get('categorie') ? parseInt(searchParams.get('categorie')) : null
+    setCategorieActiva(catDinUrl)
+    incarcaAteliere(filtre, catDinUrl)
+  }, [searchParams])
 
   const handleCategorie = (id) => {
     setCategorieActiva(id)

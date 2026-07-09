@@ -9,7 +9,6 @@ from ..models import Instructor, Atelier, Recenzie, Inregistrare, Utilizator, Pa
 
 router = APIRouter(prefix="/instructori", tags=["Instructori"])
 
-
 class AtelierSimplificat(BaseModel):
     idatelier: int
     denumire: str
@@ -20,14 +19,12 @@ class AtelierSimplificat(BaseModel):
     nrparticipanti: int
     model_config = {"from_attributes": True}
 
-
 class RecenzieInstructor(BaseModel):
     rating: int
     comentariu: Optional[str]
     denumire_atelier: str
     prenume_participant: str
     nume_participant: str
-
 
 class ProfilInstructorResponse(BaseModel):
     idinstructor: int
@@ -39,7 +36,6 @@ class ProfilInstructorResponse(BaseModel):
     rating_mediu: Optional[float]
     ateliere: List[AtelierSimplificat]
     recenzii: List[RecenzieInstructor]
-
 
 @router.get("/{id}", response_model=ProfilInstructorResponse)
 def get_profil_instructor(id: int, db: Session = Depends(get_db)):

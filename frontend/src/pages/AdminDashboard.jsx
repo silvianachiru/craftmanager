@@ -2,13 +2,17 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
+import { extrageEroare } from '../utils/validare'
 import starIcon from '../assets/star.png'
+import trashIcon from '../assets/trash-bin.png'
 
 function ModalConfirmare({ text, onConfirm, onCancel }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(61,44,53,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="card p-4" style={{ maxWidth: '420px', width: '90%', borderRadius: '20px' }}>
-        <div className="text-center mb-3" style={{ fontSize: '2.5rem' }}>🗑️</div>
+        <div className="text-center mb-3">
+          <img src={trashIcon} alt="sterge" style={{ width: '48px', height: '48px' }} />
+        </div>
         <h5 style={{ textAlign: 'center', marginBottom: '12px' }}>Confirmare stergere</h5>
         <p style={{ color: 'var(--text-secundar)', textAlign: 'center', fontSize: '0.9rem', marginBottom: '24px' }}>
           {text}
@@ -61,7 +65,7 @@ export default function AdminDashboard() {
         axios.get(`${API}/admin/statistici`, token()),
       ])
       setMesaje(r1.data)
-      setUtilizatori(r2.data)
+      setUtilizatori(r2.data.sort((a, b) => new Date(b.datacrearii) - new Date(a.datacrearii)))
       setAteliere(r3.data.sort((a, b) => new Date(a.data) - new Date(b.data)))
       setCategorii(r4.data)
       setStatistici(r5.data)
@@ -77,7 +81,6 @@ export default function AdminDashboard() {
 
   const confirma = (text, onConfirm) => setModal({ text, onConfirm })
 
-  // Mesaje
   const marcheazaCitit = async (id) => {
     await axios.patch(`${API}/admin/mesaje/${id}/citit`, {}, token())
     setMesaje(prev => prev.map(m => m.idmesaj === id ? { ...m, citit: true } : m))
@@ -86,39 +89,41 @@ export default function AdminDashboard() {
 
   const stergeMesaj = (id) => confirma('Esti sigur ca vrei sa stergi acest mesaj?', async () => {
     setModal(null)
-    await axios.delete(`${API}/admin/mesaje/${id}`, token())
-    setMesaje(prev => prev.filter(m => m.idmesaj !== id))
-    window.dispatchEvent(new Event('mesaj-citit'))
+    try {
+      await axios.delete(`${API}/admin/mesaje/${id}`, token())
+      setMesaje(prev => prev.filter(m => m.idmesaj !== id))
+      window.dispatchEvent(new Event('mesaj-citit'))
+    } catch (e) { notif(false, extrageEroare(e, 'Eroare.')) }
   })
 
-  // Utilizatori
   const stergeUtilizator = (id) => confirma('Esti sigur ca vrei sa stergi acest utilizator? Actiunea este ireversibila.', async () => {
     setModal(null)
     try {
       await axios.delete(`${API}/admin/utilizatori/${id}`, token())
       setUtilizatori(prev => prev.filter(u => u.idutilizator !== id))
       notif(true, 'Utilizator sters.')
-    } catch (e) { notif(false, e.response?.data?.detail || 'Eroare.') }
+    } catch (e) { notif(false, extrageEroare(e, 'Eroare.')) }
   })
 
-  // Ateliere
   const stergeAtelier = (id) => confirma('Esti sigur ca vrei sa stergi acest atelier?', async () => {
     setModal(null)
-    await axios.delete(`${API}/admin/ateliere/${id}`, token())
-    setAteliere(prev => prev.filter(a => a.idatelier !== id))
-    notif(true, 'Atelier sters.')
+    try {
+      await axios.delete(`${API}/admin/ateliere/${id}`, token())
+      setAteliere(prev => prev.filter(a => a.idatelier !== id))
+      notif(true, 'Atelier sters.')
+    } catch (e) { notif(false, extrageEroare(e, 'Eroare.')) }
   })
 
-  // Categorii
   const adaugaCategorie = async (e) => {
     e.preventDefault()
+    if (!nouaCategorie.trim()) { notif(false, 'Introdu denumirea categoriei.'); return }
     try {
       await axios.post(`${API}/admin/categorii`, { denumire: nouaCategorie }, token())
       setNouaCategorie('')
       const r = await axios.get(`${API}/admin/categorii`, token())
       setCategorii(r.data)
       notif(true, 'Categorie adaugata.')
-    } catch (e) { notif(false, e.response?.data?.detail || 'Eroare.') }
+    } catch (e) { notif(false, extrageEroare(e, 'Eroare.')) }
   }
 
   const stergeCategorie = (id) => confirma('Esti sigur ca vrei sa stergi aceasta categorie?', async () => {
@@ -127,18 +132,19 @@ export default function AdminDashboard() {
       await axios.delete(`${API}/admin/categorii/${id}`, token())
       setCategorii(prev => prev.filter(c => c.idcategorie !== id))
       notif(true, 'Categorie stearsa.')
-    } catch (e) { notif(false, e.response?.data?.detail || 'Eroare.') }
+    } catch (e) { notif(false, extrageEroare(e, 'Eroare.')) }
   })
 
   const adaugaTema = async (e) => {
     e.preventDefault()
+    if (!nouaTema.denumire.trim() || !nouaTema.idcategorie) { notif(false, 'Completeaza denumirea temei si alege categoria.'); return }
     try {
       await axios.post(`${API}/admin/teme`, { denumire: nouaTema.denumire, idcategorie: parseInt(nouaTema.idcategorie) }, token())
       setNouaTema({ denumire: '', idcategorie: '' })
       const r = await axios.get(`${API}/admin/categorii`, token())
       setCategorii(r.data)
       notif(true, 'Tema adaugata.')
-    } catch (e) { notif(false, e.response?.data?.detail || 'Eroare.') }
+    } catch (e) { notif(false, extrageEroare(e, 'Eroare.')) }
   }
 
   const stergeTema = (id) => confirma('Esti sigur ca vrei sa stergi aceasta tema?', async () => {
@@ -148,7 +154,7 @@ export default function AdminDashboard() {
       const r = await axios.get(`${API}/admin/categorii`, token())
       setCategorii(r.data)
       notif(true, 'Tema stearsa.')
-    } catch (e) { notif(false, e.response?.data?.detail || 'Eroare.') }
+    } catch (e) { notif(false, extrageEroare(e, 'Eroare.')) }
   })
 
   const necitite = mesaje.filter(m => m.citit === false).length
@@ -179,13 +185,12 @@ export default function AdminDashboard() {
           ))}
         </ul>
 
-        {/* ── CATEGORII ── */}
         {tab === 'categorii' && (
           <div className="row g-4">
             <div className="col-md-5">
               <div className="card p-4 mb-4">
                 <h5 className="section-heading-sm mb-3">Adauga categorie</h5>
-                <form onSubmit={adaugaCategorie} className="d-flex gap-2">
+                <form onSubmit={adaugaCategorie} className="d-flex gap-2" noValidate>
                   <input className="form-control" placeholder="Denumire categorie" value={nouaCategorie}
                     onChange={e => setNouaCategorie(e.target.value)} maxLength={200} required />
                   <button className="btn btn-primary" type="submit">Adauga</button>
@@ -193,7 +198,7 @@ export default function AdminDashboard() {
               </div>
               <div className="card p-4">
                 <h5 className="section-heading-sm mb-3">Adauga tema</h5>
-                <form onSubmit={adaugaTema}>
+                <form onSubmit={adaugaTema} noValidate>
                   <select className="form-select mb-2" value={nouaTema.idcategorie}
                     onChange={e => setNouaTema({ ...nouaTema, idcategorie: e.target.value })} required>
                     <option value="">Selecteaza categoria</option>
@@ -233,7 +238,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── MESAJE ── */}
         {tab === 'mesaje' && (
           <div>
             {mesaje.length === 0 ? <p className="section-text">Nu exista mesaje.</p> : mesaje.map(m => (
@@ -246,7 +250,7 @@ export default function AdminDashboard() {
                     <div className="mt-1"><strong>{m.subiect}</strong></div>
                     <div className="mt-1" style={{fontSize:'0.9rem'}}>{m.mesaj}</div>
                   </div>
-                  <div className="d-flex gap-2 ms-3 flex-shrink-0">
+                  <div className="d-flex gap-2 ms-3" style={{ flexShrink: 0 }}>
                     {!m.citit && <button className="btn btn-sm btn-outline-primary" onClick={() => marcheazaCitit(m.idmesaj)}>Marcat citit</button>}
                     <button className="btn btn-sm btn-outline-danger" onClick={() => stergeMesaj(m.idmesaj)}>Sterge</button>
                   </div>
@@ -256,7 +260,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── UTILIZATORI ── */}
         {tab === 'utilizatori' && (
           <div>
             <input
@@ -294,7 +297,6 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* ── ATELIERE ── */}
         {tab === 'ateliere' && (() => {
           const instructoriUnici = [...new Set(ateliere.map(a => a.instructor).filter(Boolean))]
           const ateliereFiltrate = ateliere.filter(a =>

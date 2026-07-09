@@ -17,8 +17,6 @@ router = APIRouter(prefix="/auth", tags=["Autentificare"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-
-# Scheme Pydantic
 class RegisterSchema(BaseModel):
     nume: str
     prenume: str
@@ -30,12 +28,10 @@ class RegisterSchema(BaseModel):
     bio: Optional[str] = None
     specializare: Optional[str] = None
 
-
 class TokenSchema(BaseModel):
     access_token: str
     token_type: str
     tip: str
-
 
 class UpdateProfilSchema(BaseModel):
     nume: Optional[str] = None
@@ -45,23 +41,18 @@ class UpdateProfilSchema(BaseModel):
     bio: Optional[str] = None
     specializare: Optional[str] = None
 
-
 class SchimbaParolaSchema(BaseModel):
     parola_veche: str
     parola_noua: str
 
-
-# Functii helper
 def hash_parola(parola: str) -> str:
     return bcrypt.hashpw(parola.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 def verifica_parola(parola: str, hash: str) -> bool:
     return bcrypt.checkpw(parola.encode("utf-8"), hash.encode("utf-8"))
 
-
-# Validari de format (regex) folosite la inregistrare si editare profil
-REGEX_TELEFON = re.compile(r"^(\+40|0)7[0-9]{8}$")   # mobil: 07 sau +407 urmat de 8 cifre
-REGEX_NUME = re.compile(r"^(?:[^\W\d_]|[ \-])+$")     # doar litere, spatii si cratima
+REGEX_TELEFON = re.compile(r"^(\+40|0)7[0-9]{8}$")   
+REGEX_NUME = re.compile(r"^(?:[^\W\d_]|[ \-])+$") 
 
 def valideaza_nume(valoare: str, camp: str):
     if not REGEX_NUME.match((valoare or "").strip()):
@@ -98,15 +89,12 @@ def get_utilizator_curent(
         raise credentials_exception
     return utilizator
 
-
-
 def get_admin_curent(
     utilizator_curent: Utilizator = Depends(get_utilizator_curent)
 ) -> Utilizator:
     if not utilizator_curent.administrator:
         raise HTTPException(status_code=403, detail="Acces interzis. Doar administratorii pot accesa aceasta resursa.")
     return utilizator_curent
-
 
 def anonimizeaza_cont(utilizator: Utilizator, db: Session):
     """Verifica regulile de business si anonimizeaza contul, pastrand recenziile si atelierele."""
@@ -140,7 +128,6 @@ def anonimizeaza_cont(utilizator: Utilizator, db: Session):
         utilizator.instructor.specializare = None
     db.commit()
 
-# Endpoint-uri
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(data: RegisterSchema, db: Session = Depends(get_db)):
     if db.query(Utilizator).filter(Utilizator.email == data.email).first():
@@ -151,14 +138,15 @@ def register(data: RegisterSchema, db: Session = Depends(get_db)):
 
     valideaza_nume(data.nume, "Numele")
     valideaza_nume(data.prenume, "Prenumele")
-    valideaza_telefon(data.nrtelefon)
+    nrtelefon = (data.nrtelefon or "").strip() or None
+    valideaza_telefon(nrtelefon)
 
     utilizator = Utilizator(
         nume=data.nume,
         prenume=data.prenume,
         email=data.email,
         parola=hash_parola(data.parola),
-        nrtelefon=data.nrtelefon,
+        nrtelefon=nrtelefon,
     )
     db.add(utilizator)
     db.flush()
@@ -172,7 +160,6 @@ def register(data: RegisterSchema, db: Session = Depends(get_db)):
 
     db.commit()
     return {"message": "Cont creat cu succes!"}
-
 
 @router.post("/login", response_model=TokenSchema)
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -213,7 +200,6 @@ def get_me(utilizator_curent: Utilizator = Depends(get_utilizator_curent)):
         date["specializare"] = utilizator_curent.instructor.specializare
     return date
 
-
 @router.put("/me")
 def update_profil(
     data: UpdateProfilSchema,
@@ -227,8 +213,9 @@ def update_profil(
         valideaza_nume(data.prenume, "Prenumele")
         utilizator_curent.prenume = data.prenume
     if data.nrtelefon is not None:
-        valideaza_telefon(data.nrtelefon)
-        utilizator_curent.nrtelefon = data.nrtelefon
+        nrtelefon = data.nrtelefon.strip() or None
+        valideaza_telefon(nrtelefon)
+        utilizator_curent.nrtelefon = nrtelefon
 
     if utilizator_curent.participant and data.varsta is not None:
         if data.varsta < 1 or data.varsta > 120:
@@ -244,7 +231,6 @@ def update_profil(
     db.commit()
     return {"message": "Profil actualizat cu succes."}
 
-
 @router.put("/me/parola")
 def schimba_parola(
     data: SchimbaParolaSchema,
@@ -258,7 +244,6 @@ def schimba_parola(
     utilizator_curent.parola = hash_parola(data.parola_noua)
     db.commit()
     return {"message": "Parola schimbata cu succes."}
-
 
 @router.delete("/me")
 def sterge_cont(

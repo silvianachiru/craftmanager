@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { extrageEroare } from '../utils/validare'
 import calendarIcon from '../assets/calendar.png'
 import clockIcon from '../assets/clock.png'
 import locationIcon from '../assets/location.png'
@@ -68,7 +69,7 @@ export default function DetaliiAtelier() {
       setMesaj('Te-ai inscris cu succes!')
       setEroare('')
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la inscriere')
+      setEroare(extrageEroare(err, 'Eroare la inscriere'))
     }
   }
 
@@ -139,7 +140,7 @@ export default function DetaliiAtelier() {
                 {mesaj && <div className="alert alert-success py-2 mb-3 atelier-inline-alert">{mesaj}</div>}
                 {eroare && <div className="alert alert-danger py-2 mb-3 atelier-inline-alert">{eroare}</div>}
                 {tip === 'participant' && !inscris && !atelierEsteTrecut && (
-                  atelier.locatie && atelier.nrparticipanti >= atelier.locatie.capacitate
+                  atelier.locatie && (atelier.nr_inscrisi ?? atelier.nrparticipanti) >= atelier.locatie.capacitate
                     ? <div className="alert alert-warning py-2 text-center mb-0" style={{fontSize:'0.85rem'}}>Atelierul este complet.</div>
                     : <button className="btn btn-primary w-100" onClick={handleInscriere}>Inscrie-te acum</button>
                 )}

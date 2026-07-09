@@ -8,7 +8,6 @@ import tagIcon from '../assets/tag.png'
 import ageIcon from '../assets/age-group.png'
 import { getIconAtelier } from '../utils/iconAtelier'
 
-
 export default function Home() {
   const [ateliere, setAteliere] = useState([])
   const [loading, setLoading] = useState(true)

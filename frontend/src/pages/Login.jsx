@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../services/api'
-import { emailValid } from '../utils/validare'
+import { emailValid, extrageEroare } from '../utils/validare'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -19,6 +19,10 @@ export default function Login() {
       setEroare('Adresa de email nu este valida (ex: adresa@email.com).')
       return
     }
+    if (!parola) {
+      setEroare('Introdu parola.')
+      return
+    }
     setLoading(true)
     try {
       const formData = new FormData()
@@ -31,7 +35,7 @@ export default function Login() {
       else if (tip === 'instructor') navigate('/dashboard')
       else navigate('/')
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Email sau parola incorecte')
+      setEroare(extrageEroare(err, 'Email sau parola incorecte'))
     } finally {
       setLoading(false)
     }
@@ -50,7 +54,7 @@ export default function Login() {
             </div>
             <div className="card p-4">
               {eroare && <div className="alert alert-danger">{eroare}</div>}
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <div className="mb-3">
                   <label className="form-label fw-500" style={{ color: 'var(--text-principal)' }}>
                     Email

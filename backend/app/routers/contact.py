@@ -6,13 +6,11 @@ from ..models import MesajContact
 
 router = APIRouter(prefix="/contact", tags=["Contact"])
 
-
 class MesajSchema(BaseModel):
     nume: str
     email: EmailStr
     subiect: str
     mesaj: str
-
 
 @router.post("", status_code=201)
 def trimite_mesaj(data: MesajSchema, db: Session = Depends(get_db)):

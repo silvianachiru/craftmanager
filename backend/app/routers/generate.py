@@ -40,7 +40,6 @@ BANNED_PHRASES = [
     "inaintam",
 ]
 
-
 class GenerateRequest(BaseModel):
     denumire: str
     categorie: str
@@ -50,13 +49,11 @@ class GenerateRequest(BaseModel):
     varstamin: int
     varstamax: int
 
-
 def extract_json(text):
     text = text.strip()
     if not text:
         raise ValueError("empty_response")
     return json.loads(text)
-
 
 def normalize_text(text):
     text = text.lower()
@@ -71,10 +68,8 @@ def normalize_text(text):
     })
     return text.translate(replacements)
 
-
 def count_words(text):
     return len(re.findall(r"\b\w+\b", text, flags=re.UNICODE))
-
 
 def count_sentences(text):
     text = text.strip()
@@ -84,7 +79,6 @@ def count_sentences(text):
     if sentences:
         return len(sentences)
     return 1
-
 
 def objective_starts_with_infinitive(text):
     words = re.findall(r"\b[\wăâîșşțţ-]+\b", text.strip(), flags=re.UNICODE)
@@ -96,7 +90,6 @@ def objective_starts_with_infinitive(text):
     elif first_word != "a":
         return False
     return first_word in INFINITIVE_VERBS
-
 
 def validate_generated_content(data):
     reasons = []
@@ -167,7 +160,6 @@ def validate_generated_content(data):
     reasons = list(dict.fromkeys(reasons))
     return len(reasons) == 0, reasons
 
-
 def generate_with_ollama(prompt):
     response = requests.post(
         "http://127.0.0.1:11434/api/generate",
@@ -184,7 +176,6 @@ def generate_with_ollama(prompt):
     )
     response.raise_for_status()
     return response.json()["response"]
-
 
 def build_prompt(req):
     durata_text = f"{req.durata // 60} ore" if req.durata >= 60 else f"{req.durata} minute"
@@ -237,7 +228,6 @@ Nu adăuga text înainte sau după JSON.
 Nu adăuga explicații.
 """
 
-
 def build_retry_prompt(req, reasons):
     reasons_text = ", ".join(reasons)
     return build_prompt(req) + f"""
@@ -256,7 +246,6 @@ Instrucțiuni suplimentare:
 - Păstrează exact 3 obiective.
 - Returnează din nou doar JSON valid.
 """
-
 
 @router.post("/descriere")
 def generate_descriere(req: GenerateRequest):

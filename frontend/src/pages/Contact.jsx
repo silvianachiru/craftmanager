@@ -18,6 +18,10 @@ export default function Contact() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setEroare('')
+    if (!form.nume.trim() || !form.subiect.trim() || !form.mesaj.trim()) {
+      setEroare('Completeaza toate campurile.')
+      return
+    }
     if (!emailValid(form.email)) {
       setEroare('Adresa de email nu este valida (ex: adresa@email.com).')
       return
@@ -75,7 +79,7 @@ export default function Contact() {
                   <button className="btn btn-primary" onClick={() => setTrimis(false)}>Trimite alt mesaj</button>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit} noValidate>
                   <h4 className="section-heading-lg">Trimite un mesaj</h4>
                   <div className="row">
                     <div className="col-md-6 mb-3">

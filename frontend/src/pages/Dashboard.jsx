@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link, Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { extrageEroare } from '../utils/validare'
 import calendarIcon from '../assets/calendar.png'
 import clockIcon from '../assets/clock.png'
 import tagIcon from '../assets/tag.png'
@@ -22,7 +23,6 @@ const formGol = {
   locatie_nume: '', locatie_adresa: '', locatie_oras: '', locatie_capacitate: ''
 }
 
-// DropdownTeme definit in afara componentei
 function DropdownTeme({ value, onChange, temeGrupate }) {
   return (
     <select name="idtema" className="form-select" value={value} onChange={onChange} required>
@@ -38,7 +38,6 @@ function DropdownTeme({ value, onChange, temeGrupate }) {
 
 export default function Dashboard() {
   const { utilizator, tip, seIncarca } = useAuth()
-  const navigate = useNavigate()
 
   const [ateliere, setAteliere] = useState([])
   const [teme, setTeme] = useState([])
@@ -66,13 +65,6 @@ export default function Dashboard() {
   const [tabActiv, setTabActiv] = useState('viitoare')
   const [loadingRezumat, setLoadingRezumat] = useState({})
 
-  useEffect(() => {
-    if (seIncarca) return
-    if (!utilizator || tip !== 'instructor') return
-    incarcaAteliere()
-    api.get('/teme/').then(res => setTeme(res.data)).catch(() => {})
-  }, [utilizator, tip, seIncarca])
-
   const incarcaAteliere = async () => {
     setLoading(true)
     try {
@@ -88,6 +80,13 @@ export default function Dashboard() {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (seIncarca) return
+    if (!utilizator || tip !== 'instructor') return
+    incarcaAteliere()
+    api.get('/teme/').then(res => setTeme(res.data)).catch(() => {})
+  }, [utilizator, tip, seIncarca])
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value })
   const handleEditChange = (e) => setEditForm({ ...editForm, [e.target.name]: e.target.value })
@@ -111,7 +110,7 @@ export default function Dashboard() {
       })
       setGenerare({ loading: false, eroare: '', rezultat: res.data })
     } catch (err) {
-      setGenerare({ loading: false, eroare: err.response?.data?.detail || 'Eroare la generare.', rezultat: null })
+      setGenerare({ loading: false, eroare: extrageEroare(err, 'Eroare la generare.'), rezultat: null })
     }
   }
 
@@ -130,20 +129,31 @@ export default function Dashboard() {
     return acc
   }, {})
 
-  const validareaza = (f) => {
-    if (parseFloat(f.pret) < 0) return 'Pretul nu poate fi negativ'
-    if (parseInt(f.varstamin) < 1 || parseInt(f.varstamin) > 120) return 'Varsta minima invalida (1-120)'
-    if (parseInt(f.varstamax) < 1 || parseInt(f.varstamax) > 120) return 'Varsta maxima invalida (1-120)'
-    if (parseInt(f.varstamax) < parseInt(f.varstamin)) return 'Varsta maxima trebuie sa fie mai mare decat minima'
-    if (parseInt(f.durata) < 15 || parseInt(f.durata) > 1440) return 'Durata invalida (15-1440 min)'
-    if (f.data < azi) return 'Data nu poate fi in trecut'
+  const validareaza = (f, creare = false) => {
+    const necesare = {
+      denumire: 'Denumire', pret: 'Pret', varstamin: 'Varsta minima',
+      varstamax: 'Varsta maxima', durata: 'Durata', idtema: 'Tema', data: 'Data', ora: 'Ora',
+    }
+    if (creare) Object.assign(necesare, {
+      locatie_nume: 'Nume locatie', locatie_adresa: 'Adresa',
+      locatie_oras: 'Oras', locatie_capacitate: 'Capacitate',
+    })
+    for (const [camp, eticheta] of Object.entries(necesare))
+      if (f[camp] === '' || f[camp] == null) return `Campul "${eticheta}" este obligatoriu.`
+    if (parseFloat(f.pret) < 0) return 'Pretul nu poate fi negativ.'
+    if (parseInt(f.varstamin) < 1 || parseInt(f.varstamin) > 120) return 'Varsta minima trebuie sa fie intre 1 si 120.'
+    if (parseInt(f.varstamax) < 1 || parseInt(f.varstamax) > 120) return 'Varsta maxima trebuie sa fie intre 1 si 120.'
+    if (parseInt(f.varstamax) < parseInt(f.varstamin)) return 'Varsta maxima trebuie sa fie mai mare decat minima.'
+    if (parseInt(f.durata) < 15 || parseInt(f.durata) > 1440) return 'Durata trebuie sa fie intre 15 si 1440 de minute.'
+    if (f.locatie_capacitate && (parseInt(f.locatie_capacitate) < 1 || parseInt(f.locatie_capacitate) > 5000)) return 'Capacitatea trebuie sa fie intre 1 si 5000.'
+    if (f.data < azi) return 'Data nu poate fi in trecut.'
     return null
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setEroare(''); setMesaj('')
-    const err = validareaza(form)
+    const err = validareaza(form, true)
     if (err) { setEroare(err); return }
     try {
       const locatieRes = await api.post('/locatii/', {
@@ -162,7 +172,7 @@ export default function Dashboard() {
       setForm(formGol)
       incarcaAteliere()
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la creare')
+      setEroare(extrageEroare(err, 'Eroare la creare'))
     }
   }
 
@@ -217,7 +227,7 @@ export default function Dashboard() {
       })
       setMesaj('Atelier actualizat cu succes!'); setEditId(null); incarcaAteliere()
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la editare')
+      setEroare(extrageEroare(err, 'Eroare la editare'))
     }
   }
 
@@ -249,14 +259,13 @@ export default function Dashboard() {
   }
 
   const handleVeziRezumat = async (idatelier) => {
-    if (rezumate[idatelier]) return  // deja incarcat
+    if (rezumate[idatelier]) return
     try {
       const res = await api.get(`/recenzii/atelier/${idatelier}/rezumat`)
       if (res.data) {
         setRezumate(prev => ({ ...prev, [idatelier]: res.data }))
       }
     } catch {
-      // nu exista rezumat salvat inca
     }
   }
 
@@ -266,13 +275,12 @@ export default function Dashboard() {
       const res = await api.post(`/recenzii/atelier/${idatelier}/rezumat`)
       setRezumate(prev => ({ ...prev, [idatelier]: res.data }))
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Eroare la generare rezumat.'
+      const msg = extrageEroare(err, 'Eroare la generare rezumat.')
       alert(msg)
     } finally {
       setLoadingRezumat(prev => ({ ...prev, [idatelier]: false }))
     }
   }
-
 
   const handleVeziMateriale = async (idatelier) => {
     if (showMateriale === idatelier) { setShowMateriale(null); return }
@@ -289,12 +297,13 @@ export default function Dashboard() {
 
   const handleAsociazaMaterial = async (e, idatelier) => {
     e.preventDefault()
+    if (!nouMaterial.idmaterial) { setEroare('Selecteaza un material.'); setTimeout(() => setEroare(''), 3000); return }
     try {
       await api.post(`/materiale/atelier/${idatelier}`, { idmaterial: parseInt(nouMaterial.idmaterial), cantitate: parseInt(nouMaterial.cantitate) })
       const r = await api.get(`/materiale/atelier/${idatelier}`)
       setMateriale(prev => ({ ...prev, [idatelier]: r.data }))
       setNouMaterial({ idmaterial: '', cantitate: 1 })
-    } catch (err) { setEroare(err.response?.data?.detail || 'Eroare'); setTimeout(() => setEroare(''), 3000) }
+    } catch (err) { setEroare(extrageEroare(err, 'Eroare')); setTimeout(() => setEroare(''), 3000) }
   }
 
   const handleStergeAsociere = async () => {
@@ -311,7 +320,7 @@ export default function Dashboard() {
       await api.post(`/materiale/atelier/${idatelier}/salveaza`)
       setSalvatMateriale(prev => ({ ...prev, [idatelier]: true }))
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la salvare.')
+      setEroare(extrageEroare(err, 'Eroare la salvare.'))
       setTimeout(() => setEroare(''), 4000)
     }
   }
@@ -321,14 +330,16 @@ export default function Dashboard() {
       await api.post(`/materiale/atelier/${idatelier}/editeaza`)
       setSalvatMateriale(prev => ({ ...prev, [idatelier]: false }))
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la editare.')
+      setEroare(extrageEroare(err, 'Eroare la editare.'))
       setTimeout(() => setEroare(''), 4000)
     }
   }
 
   const handleAdaugaMaterialNou = async (e, idatelier) => {
     e.preventDefault()
-    if (!nouMaterialNou.denumire || !nouMaterialNou.pret) return
+    if (!nouMaterialNou.denumire || nouMaterialNou.pret === '') {
+      setEroare('Completeaza denumirea si pretul materialului.'); setTimeout(() => setEroare(''), 3000); return
+    }
     try {
       const r = await api.post('/materiale', { denumire: nouMaterialNou.denumire, pret: parseFloat(nouMaterialNou.pret) })
       await api.post(`/materiale/atelier/${idatelier}`, { idmaterial: r.data.idmaterial, cantitate: 1 })
@@ -336,7 +347,7 @@ export default function Dashboard() {
       setMateriale(prev => ({ ...prev, [idatelier]: r1.data }))
       setToateMaterialele(r2.data)
       setNouMaterialNou({ denumire: '', pret: '' })
-    } catch (err) { setEroare(err.response?.data?.detail || 'Eroare'); setTimeout(() => setEroare(''), 3000) }
+    } catch (err) { setEroare(extrageEroare(err, 'Eroare')); setTimeout(() => setEroare(''), 3000) }
   }
 
   const handleMarcareParticipare = async (idinregistrare, idatelier) => {
@@ -350,17 +361,16 @@ export default function Dashboard() {
       }))
       setMesaj('Participare marcata!'); setTimeout(() => setMesaj(''), 3000)
     } catch (err) {
-      setEroare(err.response?.data?.detail || 'Eroare la marcare'); setTimeout(() => setEroare(''), 3000)
+      setEroare(extrageEroare(err, 'Eroare la marcare')); setTimeout(() => setEroare(''), 3000)
     }
   }
 
-  if (utilizator === null && tip === null) return (
+  if (seIncarca) return (
     <div className="container text-center py-5">
       <div className="spinner-border" style={{ color: 'var(--roz)' }} />
     </div>
   )
-  if (seIncarca) return
-    if (!utilizator || tip !== 'instructor') return <Navigate to="/" replace />
+  if (!utilizator || tip !== 'instructor') return <Navigate to="/" replace />
 
   if (loading) return (
     <div className="container text-center py-5">
@@ -376,7 +386,6 @@ export default function Dashboard() {
     <>
     <div style={{ minHeight: '100vh', background: 'var(--crem)' }}>
 
-      {/* MODAL STERGERE */}
       {deleteId && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(61,44,53,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="card p-4" style={{ maxWidth: '420px', width: '90%', borderRadius: '20px' }}>
@@ -409,11 +418,10 @@ export default function Dashboard() {
         {mesaj && <div className="alert alert-success">{mesaj}</div>}
         {eroare && <div className="alert alert-danger">{eroare}</div>}
 
-        {/* FORM CREARE */}
         {showForm && (
           <div className="card p-4 mb-5">
             <h4 style={{ marginBottom: '24px' }}>Atelier nou</h4>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
               <div className="row">
                 <div className="col-md-8 mb-3"><label className="form-label">Denumire</label><input name="denumire" className="form-control" value={form.denumire} onChange={handleChange} maxLength={200} required /></div>
                 <div className="col-md-4 mb-3"><label className="form-label">Pret (RON)</label><input name="pret" type="number" min="0" className="form-control" value={form.pret} onChange={handleChange} required /></div>
@@ -468,7 +476,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* TABS */}
         <div style={{ borderBottom: '1px solid var(--border)', marginBottom: '32px', display: 'flex', gap: '4px' }}>
           {[
             { key: 'viitoare', label: 'Ateliere viitoare', count: ateliereViitoare.length },
@@ -494,7 +501,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* ATELIERE VIITOARE */}
         {tabActiv === 'viitoare' && (ateliereViitoare.length === 0 ? (
           <div className="text-center py-4 mb-5"><p style={{ color: 'var(--text-secundar)' }}>Nu ai ateliere viitoare.</p></div>
         ) : (
@@ -534,11 +540,10 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* FORM EDITARE */}
                 {editId === atelier.idatelier && (
                   <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
                     <h5 style={{ marginBottom: '20px' }}>Editeaza atelier</h5>
-                    <form onSubmit={(e) => handleEditSubmit(e, atelier)}>
+                    <form onSubmit={(e) => handleEditSubmit(e, atelier)} noValidate>
                       <div className="row">
                         <div className="col-md-8 mb-3"><label className="form-label">Denumire</label><input name="denumire" className="form-control" value={editForm.denumire} onChange={handleEditChange} maxLength={200} required /></div>
                         <div className="col-md-4 mb-3"><label className="form-label">Pret (RON)</label><input name="pret" type="number" min="0" className="form-control" value={editForm.pret} onChange={handleEditChange} required /></div>
@@ -577,7 +582,6 @@ export default function Dashboard() {
           </div>
         ))}
 
-        {/* ATELIERE INCHEIATE */}
         {tabActiv === 'incheiate' && (ateliereTrecute.length === 0 ? (
           <div className="text-center py-4"><p style={{ color: 'var(--text-secundar)' }}>Nu ai ateliere incheiate inca.</p></div>
         ) : (
@@ -618,10 +622,8 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* EVALUARI */}
                   {showRecenzii === atelier.idatelier && (
                     <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
-                      {/* Header cu statistici + buton generare */}
                       <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                         <div>
                           <h6 style={{ marginBottom: '2px' }}>Evaluari primite</h6>
@@ -650,7 +652,6 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      {/* Lista evaluari brute */}
                       {!recenzii[atelier.idatelier] || recenzii[atelier.idatelier].length === 0 ? (
                         <p style={{ color: 'var(--text-secundar)', fontSize: '0.9rem' }}>Nicio evaluare inca.</p>
                       ) : (
@@ -674,7 +675,6 @@ export default function Dashboard() {
                         </div>
                       )}
 
-                      {/* Rezumat LLM */}
                       {rezumate[atelier.idatelier] && (() => {
                         const rez = rezumate[atelier.idatelier]
                         return (
@@ -682,14 +682,12 @@ export default function Dashboard() {
                             <h6 style={{ marginBottom: '12px', color: 'var(--roz)', display: 'flex', alignItems: 'center', gap: '6px' }}><img src={starsIcon} alt="" style={{ width: '18px', height: '18px' }} />Rezumat generat automat</h6>
                             <div className="d-flex flex-column gap-3">
 
-                              {/* Rezumat general */}
                               <div style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: '10px', padding: '14px 16px' }}>
                                 <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '6px', color: '#444', display: 'flex', alignItems: 'center', gap: '5px' }}><img src={documentsIcon} alt="" style={{ width: '15px', height: '15px' }} />Rezumat general</div>
                                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secundar)', lineHeight: 1.6 }}>{rez.rezumat_general}</p>
                               </div>
 
                               <div className="row g-2">
-                                {/* Puncte forte */}
                                 <div className="col-md-4">
                                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '14px 16px', height: '100%' }}>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#166534', display: 'flex', alignItems: 'center', gap: '5px' }}><img src={checkMarkIcon} alt="" style={{ width: '15px', height: '15px' }} />Puncte forte</div>
@@ -699,7 +697,6 @@ export default function Dashboard() {
                                   </div>
                                 </div>
 
-                                {/* Puncte slabe */}
                                 <div className="col-md-4">
                                   <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '14px 16px', height: '100%' }}>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#991b1b', display: 'flex', alignItems: 'center', gap: '5px' }}><img src={warningIcon} alt="" style={{ width: '15px', height: '15px' }} />Puncte slabe</div>
@@ -709,7 +706,6 @@ export default function Dashboard() {
                                   </div>
                                 </div>
 
-                                {/* Sugestii */}
                                 <div className="col-md-4">
                                   <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '14px 16px', height: '100%' }}>
                                     <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', gap: '5px' }}><img src={ideaIcon} alt="" style={{ width: '15px', height: '15px' }} />Sugestii</div>
@@ -730,13 +726,10 @@ export default function Dashboard() {
                     </div>
                   )}
 
-
-                  {/* MATERIALE */}
                   {showMateriale === atelier.idatelier && (
                     <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
                       <h6 style={{ marginBottom: '12px' }}>Materiale utilizate</h6>
 
-                      {/* Tabel raport cost */}
                       {materiale[atelier.idatelier] && materiale[atelier.idatelier].length > 0 ? (
                         <div style={{ marginBottom: '16px' }}>
                           <table style={{ width: '100%', fontSize: '0.82rem', borderCollapse: 'collapse' }}>
@@ -784,7 +777,6 @@ export default function Dashboard() {
                         )
                       )}
 
-                      {/* MOD SALVAT: tabel read-only + buton Editeaza */}
                       {salvatMateriale[atelier.idatelier] ? (
                         <button type="button" className="btn btn-sm"
                           style={{ border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 16px', fontSize: '0.82rem', background: 'white' }}
@@ -793,8 +785,7 @@ export default function Dashboard() {
                         </button>
                       ) : (
                         <>
-                          {/* Form selectare material existent */}
-                          <form onSubmit={e => handleAsociazaMaterial(e, atelier.idatelier)} style={{ marginBottom: '8px' }}>
+                          <form onSubmit={e => handleAsociazaMaterial(e, atelier.idatelier)} style={{ marginBottom: '8px' }} noValidate>
                             <div className="d-flex gap-2 flex-wrap align-items-center">
                               <select className="form-select form-select-sm" value={nouMaterial.idmaterial}
                                 onChange={e => setNouMaterial({ ...nouMaterial, idmaterial: e.target.value })} required
@@ -830,8 +821,7 @@ export default function Dashboard() {
                             })()}
                           </form>
 
-                          {/* Form material nou */}
-                          <form onSubmit={e => handleAdaugaMaterialNou(e, atelier.idatelier)} style={{ marginBottom: '12px' }}>
+                          <form onSubmit={e => handleAdaugaMaterialNou(e, atelier.idatelier)} style={{ marginBottom: '12px' }} noValidate>
                             <div className="d-flex gap-2 flex-wrap align-items-center">
                               <input className="form-control form-control-sm" placeholder="Material nou..."
                                 value={nouMaterialNou.denumire}
@@ -848,7 +838,6 @@ export default function Dashboard() {
                             </div>
                           </form>
 
-                          {/* Buton Salveaza */}
                           {materiale[atelier.idatelier]?.length > 0 && (
                             <button type="button" className="btn btn-sm"
                               style={{ background: 'var(--roz)', color: 'white', border: 'none', borderRadius: '8px', padding: '5px 20px' }}
@@ -861,7 +850,6 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  {/* PARTICIPANTI */}
                   {showParticipanti === atelier.idatelier && (
                     <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border)' }}>
                       <h6 style={{ marginBottom: '12px' }}>Participanti inscrisi</h6>
