@@ -40,3 +40,4 @@ Aplicația: `http://localhost:5173`
 | Administrator | admin@craftmanager.ro | admin123 |
 | Instructor | instructor@test.com | test123 |
 | Participant | adresa@gmail.com | olarit |
+# craftmanager
