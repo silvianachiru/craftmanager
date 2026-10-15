@@ -1,24 +1,11 @@
-# Python
-__pycache__/
-*.py[cod]
-*.egg-info/
+node_modules/
 venv/
 .venv/
-
-# Env / secrets
+__pycache__/
+*.pyc
 .env
-.env.*
-
-# Node
-node_modules/
-dist/
-
-# OS
 .DS_Store
-
-# Editor
-.vscode/
-
-# DB dumps / exports
-*.sql
-*.pdf
+build/
+dist/
+backend/.env
+backend/.env
